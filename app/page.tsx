@@ -22,6 +22,15 @@ const structures: Option[] = [
   { value: "afro-curls", label: "Афро-кудри" },
 ];
 
+const femaleForms: Option[] = [
+  { value: "ai", label: "AI-подбор" },
+  { value: "blunt", label: "Прямой срез" },
+  { value: "graduated", label: "Градуированная" },
+  { value: "layers", label: "Слои" },
+  { value: "cascade", label: "Каскадная" },
+  { value: "asymmetrical", label: "Асимметричная" },
+];
+
 const femaleBangs: Option[] = [
   { value: "none", label: "Без чёлки" },
   { value: "straight", label: "Прямая" },
@@ -94,11 +103,6 @@ const toneLevels = Array.from({ length: 10 }, (_, i) => ({
   label: `${i + 1} тон`,
 }));
 
-/**
- * Здесь пока используются универсальные названия оттенков.
- * Когда дадим точную палитру Insight, этот массив заменяется
- * на реальные оттенки бренда для каждого уровня тона.
- */
 const shadesByTone: Record<string, Option[]> = {
   "1": [
     { value: "natural", label: "Натуральный" },
@@ -205,6 +209,7 @@ export default function Home() {
   const [length, setLength] = useState("medium");
   const [structure, setStructure] = useState("straight");
 
+  const [femaleForm, setFemaleForm] = useState("ai");
   const [femaleBang, setFemaleBang] = useState("none");
   const [femaleParting, setFemaleParting] = useState("none");
   const [femaleVolume, setFemaleVolume] = useState("natural");
@@ -242,6 +247,7 @@ export default function Home() {
     setStructure("straight");
 
     if (nextGender === "female") {
+      setFemaleForm("ai");
       setFemaleBang("none");
       setFemaleParting("none");
       setFemaleVolume("natural");
@@ -283,11 +289,11 @@ export default function Home() {
 
       formData.append("image", image);
       formData.append("gender", gender);
-
       formData.append("length", length);
       formData.append("structure", structure);
 
       if (gender === "female") {
+        formData.append("femaleForm", femaleForm);
         formData.append("bangs", femaleBang);
         formData.append("parting", femaleParting);
         formData.append("volume", femaleVolume);
@@ -300,6 +306,7 @@ export default function Home() {
         formData.append("maleForm", maleForm);
         formData.append("temples", maleTemples);
 
+        formData.append("femaleForm", "");
         formData.append("bangs", "");
         formData.append("parting", "");
         formData.append("volume", "");
@@ -311,13 +318,7 @@ export default function Home() {
       formData.append("colorShade", colorShade);
       formData.append("coloring", coloring);
 
-      /**
-       * Просим backend вернуть несколько вариантов.
-       * Основная логика:
-       * цвет сохраняется,
-       * структура сохраняется,
-       * варианты отличаются прежде всего длиной/формой.
-       */
+      // Пока тестируем один вариант.
       formData.append("variants", "1");
 
       const response = await fetch("/api/generate", {
@@ -329,7 +330,7 @@ export default function Home() {
 
       if (!response.ok || !data.success) {
         throw new Error(
-          data.error || "Не удалось создать варианты прически."
+          data.error || "Не удалось создать вариант прически."
         );
       }
 
@@ -340,7 +341,7 @@ export default function Home() {
         : [];
 
       if (!images.length) {
-        throw new Error("AI не вернул изображения.");
+        throw new Error("AI не вернул изображение.");
       }
 
       setResultImages(images);
@@ -370,7 +371,10 @@ export default function Home() {
 
           <label className="upload">
             {preview ? (
-              <img src={preview} alt="Загруженная фотография" />
+              <img
+                src={preview}
+                alt="Загруженная фотография"
+              />
             ) : (
               <div>
                 <strong>Загрузить фотографию</strong>
@@ -419,6 +423,13 @@ export default function Home() {
 
           {gender === "female" ? (
             <>
+              <OptionGroup
+                title="Форма стрижки"
+                options={femaleForms}
+                value={femaleForm}
+                onChange={setFemaleForm}
+              />
+
               <OptionGroup
                 title="Чёлка"
                 options={femaleBangs}
@@ -521,11 +532,13 @@ export default function Home() {
             onClick={generate}
           >
             {loading
-              ? "Создаём варианты..."
+              ? "Создаём вариант..."
               : "Подобрать прическу"}
           </button>
 
-          {error && <p className="error">{error}</p>}
+          {error && (
+            <p className="error">{error}</p>
+          )}
         </section>
 
         {resultImages.length > 0 && (
@@ -533,12 +546,15 @@ export default function Home() {
             <h2>Варианты</h2>
 
             <p className="results-description">
-              Несколько вариантов на основе выбранных параметров.
+              Вариант на основе выбранных параметров.
             </p>
 
             <div className="results-grid">
               {resultImages.map((src, index) => (
-                <div className="result" key={`${src}-${index}`}>
+                <div
+                  className="result"
+                  key={`${src}-${index}`}
+                >
                   <div className="result-number">
                     Вариант {index + 1}
                   </div>
