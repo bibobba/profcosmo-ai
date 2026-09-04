@@ -10,6 +10,23 @@ const replicate = new Replicate({
 const allowed = {
   gender: ["male", "female"],
 
+  cut: [
+    "classic",
+    "crop",
+    "fade",
+    "taper",
+    "undercut",
+    "textured",
+    "bob",
+    "long-bob",
+    "square",
+    "pixie",
+    "cascade",
+    "shag",
+    "layered",
+    "straight-cut",
+  ],
+
   length: [
     "very-short",
     "short",
@@ -58,6 +75,33 @@ const allowed = {
     "wet",
   ],
 
+  temples: [
+    "natural",
+    "short",
+    "fade",
+    "skin-fade",
+  ],
+
+  nape: [
+    "natural",
+    "short",
+    "taper",
+    "fade",
+  ],
+
+  layers: [
+    "none",
+    "soft",
+    "medium",
+    "pronounced",
+  ],
+
+  ends: [
+    "straight",
+    "textured",
+    "soft",
+  ],
+
   colorDepth: [
     "1",
     "2",
@@ -90,6 +134,7 @@ const allowed = {
   ],
 
   coloring: [
+    "none",
     "solid",
     "highlighting",
     "balayage",
@@ -119,13 +164,21 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
 
     const image = formData.get("image");
+
     const gender = formData.get("gender");
+    const cut = formData.get("cut");
     const length = formData.get("length");
     const structure = formData.get("structure");
     const bangs = formData.get("bangs");
     const parting = formData.get("parting");
     const volume = formData.get("volume");
     const styling = formData.get("styling");
+
+    const temples = formData.get("temples");
+    const nape = formData.get("nape");
+
+    const layers = formData.get("layers");
+    const ends = formData.get("ends");
 
     const colorDepth = formData.get("colorDepth");
     const colorTone = formData.get("colorTone");
@@ -154,39 +207,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (
-      typeof gender !== "string" ||
-      typeof length !== "string" ||
-      typeof structure !== "string" ||
-      typeof bangs !== "string" ||
-      typeof parting !== "string" ||
-      typeof volume !== "string" ||
-      typeof styling !== "string" ||
-      typeof colorDepth !== "string" ||
-      typeof colorTone !== "string" ||
-      typeof colorIntensity !== "string" ||
-      typeof coloring !== "string" ||
-      typeof roots !== "string"
-    ) {
-      return NextResponse.json(
-        { error: "Не все параметры заполнены" },
-        { status: 400 }
-      );
+    const values = {
+      gender,
+      cut,
+      length,
+      structure,
+      bangs,
+      parting,
+      volume,
+      styling,
+      temples,
+      nape,
+      layers,
+      ends,
+      colorDepth,
+      colorTone,
+      colorIntensity,
+      coloring,
+      roots,
+    };
+
+    for (const [key, value] of Object.entries(values)) {
+      if (typeof value !== "string") {
+        return NextResponse.json(
+          { error: `Не выбран параметр: ${key}` },
+          { status: 400 }
+        );
+      }
     }
 
     if (
-      !allowed.gender.includes(gender) ||
-      !allowed.length.includes(length) ||
-      !allowed.structure.includes(structure) ||
-      !allowed.bangs.includes(bangs) ||
-      !allowed.parting.includes(parting) ||
-      !allowed.volume.includes(volume) ||
-      !allowed.styling.includes(styling) ||
-      !allowed.colorDepth.includes(colorDepth) ||
-      !allowed.colorTone.includes(colorTone) ||
-      !allowed.colorIntensity.includes(colorIntensity) ||
-      !allowed.coloring.includes(coloring) ||
-      !allowed.roots.includes(roots)
+      !allowed.gender.includes(gender as string) ||
+      !allowed.cut.includes(cut as string) ||
+      !allowed.length.includes(length as string) ||
+      !allowed.structure.includes(structure as string) ||
+      !allowed.bangs.includes(bangs as string) ||
+      !allowed.parting.includes(parting as string) ||
+      !allowed.volume.includes(volume as string) ||
+      !allowed.styling.includes(styling as string) ||
+      !allowed.temples.includes(temples as string) ||
+      !allowed.nape.includes(nape as string) ||
+      !allowed.layers.includes(layers as string) ||
+      !allowed.ends.includes(ends as string) ||
+      !allowed.colorDepth.includes(colorDepth as string) ||
+      !allowed.colorTone.includes(colorTone as string) ||
+      !allowed.colorIntensity.includes(colorIntensity as string) ||
+      !allowed.coloring.includes(coloring as string) ||
+      !allowed.roots.includes(roots as string)
     ) {
       return NextResponse.json(
         { error: "Выберите корректные параметры" },
@@ -194,34 +261,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const imageBuffer = Buffer.from(await image.arrayBuffer());
-    const base64 = imageBuffer.toString("base64");
-    const inputImage = `data:${image.type};base64,${base64}`;
-
     const genderText: Record<string, string> = {
-      male: "male person / man",
-      female: "female person / woman",
+      male: "MAN / MALE CLIENT",
+      female: "WOMAN / FEMALE CLIENT",
+    };
+
+    const cutText: Record<string, string> = {
+      classic: "classic professional haircut",
+      crop: "textured crop haircut",
+      fade: "fade haircut",
+      taper: "taper haircut",
+      undercut: "undercut haircut",
+      textured: "textured haircut",
+
+      bob: "bob haircut",
+      "long-bob": "long bob haircut",
+      square: "classic square bob",
+      pixie: "pixie haircut",
+      cascade: "layered cascade haircut",
+      shag: "shag haircut",
+      layered: "layered haircut",
+      "straight-cut": "straight blunt haircut",
     };
 
     const lengthText: Record<string, string> = {
       "very-short": "very short",
       short: "short",
       medium: "medium length",
-      "below-shoulders": "below the shoulders",
+      "below-shoulders": "below shoulder length",
       long: "long",
     };
 
     const structureText: Record<string, string> = {
-      straight: "straight",
-      wavy: "wavy",
-      curly: "curly",
-      "very-curly": "very curly",
+      straight: "straight hair",
+      wavy: "wavy hair",
+      curly: "curly hair",
+      "very-curly": "very curly hair",
     };
 
     const bangsText: Record<string, string> = {
       none: "no bangs",
       straight: "straight bangs",
-      side: "side-swept bangs",
+      side: "side swept bangs",
       long: "long bangs",
       curtain: "curtain bangs",
       short: "short bangs",
@@ -236,7 +317,7 @@ export async function POST(request: NextRequest) {
     };
 
     const volumeText: Record<string, string> = {
-      low: "minimal volume",
+      low: "low volume",
       natural: "natural volume",
       medium: "medium volume",
       high: "high volume",
@@ -251,58 +332,90 @@ export async function POST(request: NextRequest) {
       wet: "wet look styling",
     };
 
+    const templesText: Record<string, string> = {
+      natural: "natural temples",
+      short: "short temples",
+      fade: "fade at the temples",
+      "skin-fade": "skin fade at the temples",
+    };
+
+    const napeText: Record<string, string> = {
+      natural: "natural nape",
+      short: "short nape",
+      taper: "tapered nape",
+      fade: "fade at the nape",
+    };
+
+    const layersText: Record<string, string> = {
+      none: "no layers",
+      soft: "soft layers",
+      medium: "medium layers",
+      pronounced: "pronounced layers",
+    };
+
+    const endsText: Record<string, string> = {
+      straight: "straight blunt ends",
+      textured: "textured ends",
+      soft: "soft natural ends",
+    };
+
     const colorToneText: Record<string, string> = {
-      natural: "natural",
-      ash: "ash",
-      beige: "beige",
-      gold: "golden",
-      copper: "copper",
-      red: "red",
-      violet: "violet",
-      pearl: "pearl",
+      natural: "natural tone",
+      ash: "ash tone",
+      beige: "beige tone",
+      gold: "golden tone",
+      copper: "copper tone",
+      red: "red tone",
+      violet: "violet tone",
+      pearl: "pearl tone",
     };
 
     const colorIntensityText: Record<string, string> = {
-      pastel: "pastel",
-      soft: "soft",
-      medium: "medium",
-      rich: "rich",
+      pastel: "pastel intensity",
+      soft: "soft intensity",
+      medium: "medium intensity",
+      rich: "rich saturated intensity",
     };
 
     const coloringText: Record<string, string> = {
+      none: "NO COLORING — preserve the original hair color",
       solid: "solid color",
       highlighting: "highlighting",
       balayage: "balayage",
       shatush: "shatush",
       airtouch: "AirTouch",
       ombre: "ombre",
-      toning: "toning",
+      toning: "professional toning",
     };
 
     const rootsText: Record<string, string> = {
       same: "roots matching the lengths",
       natural: "natural roots",
       dark: "darker roots",
-      stretch: "soft root color transition",
+      stretch: "soft root transition",
     };
 
+    const isColorChange =
+      coloring !== "none" || colorTone !== "natural";
+
     const prompt = `
-EDIT THE PROVIDED PHOTO.
+EDIT THE PROVIDED PHOTOGRAPH.
 
-DO NOT CREATE A NEW PERSON.
+DO NOT GENERATE A NEW PERSON.
 
-This is a professional hairstyle and hair-color visualization.
+THIS IS A PROFESSIONAL HAIRCUT AND HAIR COLOR VISUALIZATION.
 
-The person MUST remain the exact same person as in the input photograph.
-
-CLIENT:
-Gender: ${genderText[gender]}
+The client is:
+${genderText[gender as string]}
 
 IDENTITY PRESERVATION IS THE HIGHEST PRIORITY.
 
-Preserve exactly:
-- facial identity;
-- face shape;
+The exact same person must remain in the final image.
+
+PRESERVE EXACTLY:
+- identity;
+- face;
+- facial structure;
 - eyes;
 - eyebrows;
 - nose;
@@ -323,92 +436,139 @@ Preserve exactly:
 - lighting;
 - background.
 
-DO NOT regenerate the face.
+DO NOT REGENERATE THE FACE.
 
-DO NOT beautify the face.
+DO NOT BEAUTIFY THE FACE.
 
-DO NOT alter facial features.
+DO NOT ALTER FACIAL FEATURES.
 
-DO NOT change facial proportions.
+DO NOT CHANGE AGE.
 
-DO NOT change age.
+DO NOT CHANGE BODY.
 
-DO NOT change body proportions.
+DO NOT CHANGE CLOTHING.
 
-DO NOT change clothing.
+DO NOT CHANGE BACKGROUND.
 
-DO NOT change the background.
+DO NOT CHANGE SEX OR GENDER.
 
-DO NOT change the person's sex or gender.
-
-If the input person is male, the result MUST remain male.
-
-If the input person is female, the result MUST remain female.
+A MAN MUST REMAIN A MAN.
+A WOMAN MUST REMAIN A WOMAN.
 
 ONLY MODIFY THE HAIR.
 
-HAIRSTYLE SPECIFICATION:
+================================
+PROFESSIONAL HAIRCUT SPECIFICATION
+================================
 
-Gender:
-${genderText[gender]}
+CLIENT:
+${genderText[gender as string]}
 
-Length:
-${lengthText[length]}
+HAIRCUT FORM:
+${cutText[cut as string]}
 
-Hair structure:
-${structureText[structure]}
+LENGTH:
+${lengthText[length as string]}
 
-Bangs:
-${bangsText[bangs]}
+HAIR STRUCTURE:
+${structureText[structure as string]}
 
-Parting:
-${partingText[parting]}
+BANGS:
+${bangsText[bangs as string]}
 
-Volume:
-${volumeText[volume]}
+PARTING:
+${partingText[parting as string]}
 
-Styling:
-${stylingText[styling]}
+VOLUME:
+${volumeText[volume as string]}
 
-HAIR COLOR SPECIFICATION:
+STYLING:
+${stylingText[styling as string]}
 
-Depth of tone / UGT:
-Level ${colorDepth} on the professional 1–10 hair color depth scale.
+${
+  gender === "male"
+    ? `
+MEN'S TECHNICAL DETAILS:
 
-Color direction:
-${colorToneText[colorTone]}
+TEMPLES:
+${templesText[temples as string]}
 
-Color intensity:
-${colorIntensityText[colorIntensity]}
+NAPE:
+${napeText[nape as string]}
+`
+    : `
+WOMEN'S TECHNICAL DETAILS:
 
-Coloring technique:
-${coloringText[coloring]}
+LAYERS:
+${layersText[layers as string]}
 
-Roots:
-${rootsText[roots]}
+ENDS:
+${endsText[ends as string]}
+`
+}
 
-The hairstyle and color must look professionally executed.
+================================
+HAIR COLOR SPECIFICATION
+================================
 
-The hair must:
+${
+  isColorChange
+    ? `
+COLORING IS REQUESTED.
+
+DEPTH OF TONE / UGT:
+Level ${colorDepth} on the professional 1–10 hair depth scale.
+
+COLOR DIRECTION:
+${colorToneText[colorTone as string]}
+
+COLOR INTENSITY:
+${colorIntensityText[colorIntensity as string]}
+
+COLORING TECHNIQUE:
+${coloringText[coloring as string]}
+
+ROOTS:
+${rootsText[roots as string]}
+`
+    : `
+NO COLORING IS REQUESTED.
+
+PRESERVE THE ORIGINAL HAIR COLOR.
+
+DO NOT CHANGE THE HAIR COLOR.
+
+DO NOT APPLY A NEW COLOR.
+
+The selected UGT value is only a reference and must NOT cause recoloring.
+`
+}
+
+================================
+REALISM
+================================
+
+The hairstyle must look physically realistic.
+
+Hair must:
 - follow the existing hairline;
 - follow the existing head shape;
+- connect naturally to the scalp;
 - have realistic density;
 - have realistic individual strands;
 - have realistic texture;
 - have realistic volume;
 - have realistic shadows;
 - have natural transitions;
-- look like real human hair.
+- look professionally cut and styled.
 
-The result must look like the SAME PERSON
-in the SAME PHOTOGRAPH
-after a professional haircut, styling and hair-color service.
+The result must look like:
 
-THE ONLY INTENTIONAL CHANGES ARE:
-1. hairstyle;
-2. hair color.
+THE SAME PERSON
+IN THE SAME PHOTOGRAPH
+AFTER A PROFESSIONAL HAIRCUT AND, IF REQUESTED, COLORING SERVICE.
 
-EVERYTHING ELSE MUST REMAIN UNCHANGED.
+THE ONLY INTENTIONAL CHANGE IS THE HAIR.
 
 DO NOT CHANGE IDENTITY.
 DO NOT CHANGE FACE.
@@ -420,6 +580,10 @@ DO NOT CHANGE BACKGROUND.
 
 HAIR ONLY.
 `;
+
+    const imageBuffer = Buffer.from(await image.arrayBuffer());
+    const base64 = imageBuffer.toString("base64");
+    const inputImage = `data:${image.type};base64,${base64}`;
 
     const output = await replicate.run(
       "black-forest-labs/flux-kontext-pro",
