@@ -94,15 +94,15 @@ const VALID_COLORING = [
 function lengthText(value: string) {
   const map: Record<string, string> = {
     "very-short":
-      "очень короткая длина, волосы заметно выше ушей или около уровня ушей",
+      "очень короткая длина: волосы значительно выше плеч, короткий силуэт",
     short:
-      "короткая длина, волосы примерно до уровня ушей или подбородка в зависимости от формы",
+      "короткая длина: волосы примерно от уровня ушей до подбородка",
     medium:
-      "средняя длина, волосы примерно до подбородка или плеч",
+      "средняя длина: волосы примерно от подбородка до уровня плеч",
     "below-shoulders":
-      "длина ниже плеч, волосы заметно ниже линии плеч",
+      "длина ниже плеч: волосы заметно ниже линии плеч",
     long:
-      "длинные волосы, значительно ниже плеч",
+      "длинные волосы: волосы значительно ниже плеч",
   };
 
   return map[value] || value;
@@ -111,13 +111,13 @@ function lengthText(value: string) {
 function structureText(value: string) {
   const map: Record<string, string> = {
     straight:
-      "прямые волосы без выраженной волны",
+      "прямые волосы без выраженной естественной волны",
     wavy:
-      "волнистые волосы с естественной мягкой волной",
+      "волнистые волосы с мягкой естественной волной",
     curly:
       "кудрявые волосы с выраженными завитками",
     "afro-curls":
-      "очень плотные мелкие афро-кудри с естественной спиральной структурой",
+      "очень плотные мелкие афро-кудри с выраженной спиральной структурой",
   };
 
   return map[value] || value;
@@ -125,18 +125,109 @@ function structureText(value: string) {
 
 function femaleFormText(value: string) {
   const map: Record<string, string> = {
-    ai:
-      "AI-подбор формы: самостоятельно выбери наиболее подходящую профессиональную форму стрижки, учитывая лицо, голову, структуру волос, длину и остальные выбранные параметры",
-    blunt:
-      "прямой срез: чёткая цельная линия с минимальной градуировкой и слоями",
-    graduated:
-      "градуированная форма: постепенное изменение длины волос для создания градуированной геометрии",
-    layers:
-      "слоистая форма: несколько уровней длины с заметной многослойностью",
-    cascade:
-      "каскадная форма: выраженные переходы длины и каскадное распределение прядей",
-    asymmetrical:
-      "асимметричная форма: намеренно различающаяся длина или геометрия с одной стороны и другой",
+    ai: `
+AI-ПОДБОР ФОРМЫ.
+
+Самостоятельно выбери конкретную профессиональную форму стрижки для этого человека.
+
+Учитывай:
+- форму лица;
+- форму головы;
+- пропорции;
+- густоту волос;
+- естественную структуру волос;
+- выбранную длину;
+- выбранный пробор;
+- объём;
+- укладку;
+- концы.
+
+Форма должна выглядеть как осознанное решение профессионального парикмахера.
+
+НЕ выбирай форму случайно.
+НЕ меняй выбранную длину.
+НЕ нарушай остальные параметры.
+
+Конкретное название стрижки пользователю не задано — поэтому ты самостоятельно определяешь геометрию формы.
+`,
+
+    blunt: `
+ПРЯМОЙ СРЕЗ.
+
+Создай цельную, чёткую геометрическую форму с выраженной линией нижнего среза.
+
+Нижняя линия волос должна быть визуально ровной и плотной.
+Не добавляй выраженные слои.
+Не создавай каскад.
+Не делай заметную разницу между уровнями длины.
+
+Главный визуальный признак — единая плотная линия среза.
+`,
+
+    graduated: `
+ГРАДУИРОВАННАЯ ФОРМА.
+
+Создай форму, в которой длина волос постепенно изменяется между зонами.
+
+Должен быть заметен профессиональный переход длины.
+Форма должна иметь внутреннюю градуировку и изменение веса волос.
+
+Не делай простой ровный blunt-срез.
+Не превращай форму в полностью одноуровневое каре.
+Градуировка должна быть видна по силуэту и распределению массы волос.
+`,
+
+    layers: `
+СЛОИСТАЯ ФОРМА.
+
+Создай стрижку с несколькими различимыми уровнями длины.
+
+Верхние и внутренние слои должны быть короче нижних.
+Должна быть заметная разница между уровнями волос.
+Слои должны создавать движение и изменение силуэта.
+
+Волосы НЕ должны выглядеть как единая цельная масса одной длины.
+
+КРИТИЧЕСКИ ВАЖНО:
+- не делать обычный blunt bob;
+- не делать одноуровневое каре;
+- не делать ровный цельный срез;
+- не скрывать слои полностью;
+- сохранить несколько визуально различимых уровней длины.
+
+При этом общая длина должна соответствовать выбранной пользователем длине.
+`,
+
+    cascade: `
+КАСКАДНАЯ ФОРМА.
+
+Создай выраженную каскадную структуру волос с последовательными переходами длины.
+
+Передние и верхние зоны должны иметь более короткие уровни.
+Нижние зоны должны оставаться длиннее.
+Переходы между уровнями должны формировать выраженный каскадный силуэт.
+
+КРИТИЧЕСКИ ВАЖНО:
+- не делать одноуровневую стрижку;
+- не делать простой blunt bob;
+- не делать обычное каре;
+- создать заметную многоуровневую структуру;
+- сохранить выбранную общую длину.
+`,
+
+    asymmetrical: `
+АССИМЕТРИЧНАЯ ФОРМА.
+
+Создай намеренно асимметричную геометрию стрижки.
+
+Левая и правая стороны должны визуально отличаться по длине или форме.
+Асимметрия должна быть осознанной и профессиональной, а не случайной ошибкой.
+
+Не делай симметричное каре.
+Не делай одинаковую длину с обеих сторон.
+
+Общая длина всё равно должна соответствовать выбранному параметру длины.
+`,
   };
 
   return map[value] || value;
@@ -144,7 +235,7 @@ function femaleFormText(value: string) {
 
 function femaleBangsText(value: string) {
   const map: Record<string, string> = {
-    none: "без чёлки",
+    none: "без чёлки: волосы не должны образовывать отдельную чёлку на лбу",
     straight: "прямая чёлка",
     side: "боковая чёлка",
     long: "длинная чёлка",
@@ -192,9 +283,9 @@ function stylingText(value: string) {
 
 function endsText(value: string) {
   const map: Record<string, string> = {
-    straight: "прямые концы",
+    straight: "прямые, чёткие концы",
     textured: "текстурированные концы",
-    soft: "мягкие, естественно лежащие концы",
+    soft: "мягкие естественные концы",
   };
 
   return map[value] || value;
@@ -202,13 +293,13 @@ function endsText(value: string) {
 
 function maleFormText(value: string) {
   const map: Record<string, string> = {
-    classic: "классическая форма",
+    classic: "классическая мужская форма",
     crop: "Crop",
     fade: "Fade",
     taper: "Taper",
     undercut: "Undercut",
-    textured: "текстурированная форма",
-    elongated: "удлинённая форма",
+    textured: "текстурированная мужская форма",
+    elongated: "удлинённая мужская форма",
   };
 
   return map[value] || value;
@@ -231,7 +322,7 @@ function coloringText(value: string) {
     solid:
       "однотонное окрашивание по всей массе волос",
     highlighting:
-      "мелирование с отдельными более светлыми прядями",
+      "мелирование с отдельными светлыми прядями",
     balayage:
       "Balayage с мягким распределением светлых участков",
     shatush:
@@ -239,7 +330,7 @@ function coloringText(value: string) {
     airtouch:
       "AirTouch с естественным осветлением отдельных прядей",
     ombre:
-      "Ombre с заметным переходом цвета по длине",
+      "Ombre с переходом цвета по длине",
     toning:
       "тонирование с равномерным изменением оттенка",
     "gray-camouflage":
@@ -308,47 +399,56 @@ function buildPrompt(params: {
 EDIT THE PROVIDED PHOTOGRAPH.
 
 This is a professional hairstyle visualization.
-The photograph is the source of truth.
+
+The provided photograph is the source of truth.
 
 DO NOT CREATE A NEW PERSON.
 
-IDENTITY PRESERVATION — ABSOLUTE PRIORITY:
-- Keep exactly the same person.
-- Preserve facial identity and facial structure.
-- Preserve eyes, eyebrows, nose, lips, jaw, ears and skin.
-- Preserve apparent age.
-- Preserve head position.
-- Preserve camera angle.
-- Preserve body position and proportions.
-- Preserve clothing.
-- Preserve background.
-- Preserve lighting.
-- Preserve shadows.
-- Preserve photographic style.
-- Do not beautify the face.
-- Do not change makeup.
-- Do not alter facial features.
-- Do not alter body shape.
-- Do not change the composition.
-- Do not add accessories.
-- Do not add jewelry.
-- Do not add hats.
-- Do not add hair accessories.
+IDENTITY PRESERVATION IS EXTREMELY IMPORTANT.
+
+Keep:
+- exactly the same person;
+- the same face;
+- the same facial proportions;
+- the same eyes;
+- the same eyebrows;
+- the same nose;
+- the same lips;
+- the same jaw;
+- the same ears;
+- the same apparent age;
+- the same skin;
+- the same head position;
+- the same camera angle;
+- the same body;
+- the same clothing;
+- the same background;
+- the same lighting;
+- the same composition.
+
+Do not beautify the face.
+Do not modify facial features.
+Do not modify the body.
+Do not modify the clothing.
+Do not modify the background.
 
 ONLY MODIFY THE HAIR.
 
+The result must look like a realistic photograph of the SAME PERSON after visiting a professional hair salon.
+
+The hair must remain naturally attached to the scalp.
+The hairline must remain realistic.
+Hair density must remain realistic.
+Individual strands must look natural.
+The result must be photorealistic.
+
 HAIR PARAMETERS ARE HARD CONSTRAINTS.
 
-Every selected hair parameter must be respected simultaneously.
-Do not replace one requested characteristic with another.
-Do not ignore a parameter because another parameter is more visually convenient.
+All selected parameters must be respected simultaneously.
 
-The final image must look like the SAME PERSON in the SAME PHOTOGRAPH after a professional salon hairstyle and/or hair-color change.
-
-The hair must remain physically realistic and naturally attached to the person's scalp.
-The hairline must remain believable.
-Hair density must remain believable.
-Hair texture must remain believable.
+Do not ignore a selected parameter.
+Do not replace one selected parameter with another.
+Do not prioritize creativity over the selected professional parameters.
 `;
 
   let hairInstructions = `
@@ -364,28 +464,10 @@ ${structureText(structure)}
 
   if (gender === "female") {
     hairInstructions += `
-FEMALE HAIR DESIGN:
+FEMALE HAIR DESIGN
 
 FORM OF HAIRCUT:
 ${femaleFormText(femaleForm)}
-
-The form of the haircut must be constructed according to the selected form above.
-
-If the selected form is AI-podbor:
-- You choose the specific haircut geometry yourself.
-- Choose the most suitable professional form for this particular person.
-- Consider face shape, head shape, hair density, hair structure, selected length and all other selected parameters.
-- The specific haircut name is NOT predetermined.
-- Do not mention a haircut name in the image.
-- Do not invent a form that conflicts with the selected parameters.
-
-If a specific form is selected:
-- That form is mandatory.
-- Build the haircut geometry around that form.
-- Do not replace it with another basic form.
-
-LENGTH HAS HIGH PRIORITY:
-The final silhouette must visibly match the selected length.
 
 BANGS:
 ${femaleBangsText(bangs)}
@@ -402,16 +484,30 @@ ${stylingText(styling)}
 ENDS:
 ${endsText(ends)}
 
-IMPORTANT FEMALE RULES:
-- Do not add bangs when "without bangs" is selected.
-- Do not add a pronounced parting when "without pronounced parting" is selected.
-- Do not create excessive volume when natural or low volume is selected.
-- Do not turn straight hair into waves or curls.
-- Do not turn the selected length into another length.
+FEMALE PARAMETER PRIORITIES:
+
+1. Overall length must visibly match the selected length.
+2. The selected haircut form must be visibly expressed.
+3. Hair structure must match the selected structure.
+4. Bangs must match exactly.
+5. Parting must match exactly.
+6. Volume must match.
+7. Styling must match.
+8. Ends must match.
+
+Do not let the selected styling hide the haircut geometry.
+
+Do not let the selected volume change the actual haircut length.
+
+Do not let the selected hair structure change the selected haircut form.
+
+If "without bangs" is selected, absolutely do not create bangs.
+
+If "without pronounced parting" is selected, do not create a strong visible parting.
 `;
   } else {
     hairInstructions += `
-MALE HAIR DESIGN:
+MALE HAIR DESIGN
 
 FORM:
 ${maleFormText(maleForm)}
@@ -419,73 +515,107 @@ ${maleFormText(maleForm)}
 TEMPLES:
 ${templesText(temples)}
 
-IMPORTANT MALE RULES:
-- The selected male form is mandatory.
-- The selected temple shape is mandatory.
-- Respect the selected length.
-- Do not add bangs.
-- Do not add a side part.
-- Do not add a nape design.
-- Do not invent additional styling parameters.
+The selected male form is mandatory.
+
+The selected temple design is mandatory.
+
+The selected length is mandatory.
+
+Do not add bangs.
+Do not add a side part.
+Do not add a nape design.
+Do not invent additional haircut parameters.
 `;
   }
 
   const colorInstructions = `
-COLOR DESIGN:
+COLOR DESIGN
 
 TONE LEVEL:
 ${colorDepth} tone
 
-SELECTED SHADE:
+SHADE:
 ${shadeText(colorShade)}
 
 COLORING TECHNIQUE:
 ${coloringText(coloring)}
 
-COLOR RULES:
-- The selected tone level is a HARD COLOR CONSTRAINT.
-- The selected shade is a HARD COLOR CONSTRAINT.
-- The selected coloring technique is a HARD COLOR CONSTRAINT.
-- Do not randomly change the hair to another color.
-- Do not make the hair dramatically lighter or darker unless the selected technique requires it.
-- Keep the result salon-realistic.
-- Preserve realistic hair strand variation.
-- Preserve realistic highlights and shadows.
-- Do not change the skin tone.
-- Do not change eyebrows or eyelashes unless this is an unavoidable natural consequence of the selected hair color.
+COLOR IS A HARD CONSTRAINT.
+
+The final hair color must visibly correspond to the selected tone level and shade.
+
+Do not randomly change the hair color.
+
+Do not change the skin tone.
+
+Do not change the eyebrows or eyelashes simply to make the result more dramatic.
+
+Keep realistic natural variation in individual hair strands.
+
+The coloring technique must be visually consistent with the selected technique.
+
+If "without coloring" is selected, preserve the person's natural hair color as closely as possible.
 `;
 
   const finalCheck = `
-FINAL INTERNAL CHECK BEFORE GENERATING:
+FINAL QUALITY CONTROL
 
-Check ALL of the following:
+Before producing the image, internally verify:
 
-1. Same person.
-2. Same face.
-3. Same body.
-4. Same clothes.
-5. Same background.
-6. Same composition.
-7. Only hair changed.
-8. Correct length.
-9. Correct hair structure.
-10. Correct haircut form.
-11. Correct bangs.
-12. Correct parting.
-13. Correct volume.
-14. Correct styling.
-15. Correct ends.
-16. Correct tone level.
-17. Correct shade.
-18. Correct coloring technique.
+IDENTITY:
+- same person;
+- same face;
+- same body;
+- same clothing;
+- same background;
+- same composition.
 
-If any hair parameter conflicts with the generated result, correct the hair before producing the final image.
+HAIR:
+- correct length;
+- correct structure;
+- correct haircut form;
+- correct bangs;
+- correct parting;
+- correct volume;
+- correct styling;
+- correct ends.
 
-Do not optimize for fashion.
-Do not optimize for creativity.
-Optimize for accurate execution of the selected professional parameters.
+COLOR:
+- correct tone level;
+- correct shade;
+- correct coloring technique.
 
-Produce ONE photorealistic salon visualization.
+MOST IMPORTANT:
+
+The generated hairstyle must visibly communicate the selected haircut form.
+
+For example:
+
+If the form is LAYERS:
+the image must visibly contain multiple levels of hair length.
+It must NOT look like a simple one-length bob.
+
+If the form is CASCADE:
+the image must visibly contain a cascade of different lengths.
+It must NOT look like a simple bob.
+
+If the form is GRADUATED:
+the image must visibly contain a gradual change in length and weight.
+
+If the form is ASYMMETRICAL:
+the left and right sides must visibly differ.
+
+If the form is BLUNT:
+the lower edge must be visibly clean, dense and predominantly one length.
+
+If the form is AI-PODBOR:
+choose the most professionally suitable haircut geometry for this person while respecting every other selected parameter.
+
+Do not make the result generic.
+
+Do not make the result identical to the original hairstyle when the selected parameters require a visible haircut change.
+
+Produce ONE photorealistic final hairstyle visualization.
 `;
 
   return `
@@ -517,8 +647,14 @@ export async function POST(request: Request) {
 
     const image = formData.get("image");
 
-    const gender = String(formData.get("gender") || "");
-    const length = String(formData.get("length") || "");
+    const gender = String(
+      formData.get("gender") || ""
+    );
+
+    const length = String(
+      formData.get("length") || ""
+    );
+
     const structure = String(
       formData.get("structure") || ""
     );
@@ -741,22 +877,25 @@ export async function POST(request: Request) {
       coloring,
     });
 
-    console.log("Generating hairstyle with parameters:", {
-      gender,
-      length,
-      structure,
-      femaleForm,
-      bangs,
-      parting,
-      volume,
-      styling,
-      ends,
-      maleForm,
-      temples,
-      colorDepth,
-      colorShade,
-      coloring,
-    });
+    console.log(
+      "Generating hairstyle with parameters:",
+      {
+        gender,
+        length,
+        structure,
+        femaleForm,
+        bangs,
+        parting,
+        volume,
+        styling,
+        ends,
+        maleForm,
+        temples,
+        colorDepth,
+        colorShade,
+        coloring,
+      }
+    );
 
     const imageBlob = new Blob(
       [await image.arrayBuffer()],
@@ -796,7 +935,10 @@ export async function POST(request: Request) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("OpenAI API error:", data);
+      console.error(
+        "OpenAI API error:",
+        data
+      );
 
       return Response.json(
         {
