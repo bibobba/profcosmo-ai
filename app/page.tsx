@@ -3,6 +3,10 @@
 import { useState } from "react";
 
 const options = {
+  gender: [
+    ["male", "Мужской"],
+    ["female", "Женский"],
+  ],
   length: [
     ["short", "Короткая"],
     ["medium", "Средняя"],
@@ -24,9 +28,12 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [result, setResult] = useState("");
+
+  const [gender, setGender] = useState("male");
   const [length, setLength] = useState("medium");
   const [structure, setStructure] = useState("straight");
   const [style, setStyle] = useState("modern");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -61,6 +68,7 @@ export default function Home() {
       const formData = new FormData();
 
       formData.append("image", file);
+      formData.append("gender", gender);
       formData.append("length", length);
       formData.append("structure", structure);
       formData.append("style", style);
@@ -117,8 +125,12 @@ export default function Home() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
+
               const dropped = e.dataTransfer.files[0];
-              if (dropped) handleFile(dropped);
+
+              if (dropped) {
+                handleFile(dropped);
+              }
             }}
           >
             {preview ? (
@@ -136,7 +148,10 @@ export default function Home() {
               accept="image/jpeg,image/png,image/webp"
               onChange={(e) => {
                 const selected = e.target.files?.[0];
-                if (selected) handleFile(selected);
+
+                if (selected) {
+                  handleFile(selected);
+                }
               }}
             />
           </label>
@@ -144,6 +159,13 @@ export default function Home() {
 
         <div className="card">
           <h2>02 — Параметры</h2>
+
+          <Group
+            title="Пол"
+            options={options.gender}
+            value={gender}
+            setValue={setGender}
+          />
 
           <Group
             title="Длина"
@@ -187,7 +209,9 @@ export default function Home() {
           {loading ? (
             <div className="loading">
               <div className="spinner" />
+
               <h3>Создаём вашу визуализацию</h3>
+
               <p>AI подбирает новую прическу...</p>
             </div>
           ) : (
