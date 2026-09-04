@@ -8,6 +8,26 @@ const options = {
     ["female", "Женский"],
   ],
 
+  maleCut: [
+    ["classic", "Классическая"],
+    ["crop", "Crop"],
+    ["fade", "Fade"],
+    ["taper", "Taper"],
+    ["undercut", "Undercut"],
+    ["textured", "Текстурированная"],
+  ],
+
+  femaleCut: [
+    ["bob", "Боб"],
+    ["long-bob", "Лонг-боб"],
+    ["square", "Каре"],
+    ["pixie", "Пикси"],
+    ["cascade", "Каскад"],
+    ["shag", "Шэг"],
+    ["layered", "Слои"],
+    ["straight-cut", "Ровный срез"],
+  ],
+
   length: [
     ["very-short", "Очень короткая"],
     ["short", "Короткая"],
@@ -28,13 +48,13 @@ const options = {
     ["straight", "Прямая"],
     ["side", "Косая"],
     ["long", "Удлиненная"],
-    ["curtain", "Curtain bangs"],
+    ["curtain", "Curtain"],
     ["short", "Короткая"],
   ],
 
   parting: [
     ["none", "Без выраженного"],
-    ["center", "По центру"],
+    ["center", "Центральный"],
     ["left", "Слева"],
     ["right", "Справа"],
     ["side", "Боковой"],
@@ -54,6 +74,33 @@ const options = {
     ["voluminous", "Объемная"],
     ["messy", "Небрежная"],
     ["wet", "Wet look"],
+  ],
+
+  temples: [
+    ["natural", "Естественные"],
+    ["short", "Короткие"],
+    ["fade", "Fade"],
+    ["skin-fade", "Skin fade"],
+  ],
+
+  nape: [
+    ["natural", "Естественный"],
+    ["short", "Короткий"],
+    ["taper", "Taper"],
+    ["fade", "Fade"],
+  ],
+
+  layers: [
+    ["none", "Без слоев"],
+    ["soft", "Мягкие"],
+    ["medium", "Средние"],
+    ["pronounced", "Выраженные"],
+  ],
+
+  ends: [
+    ["straight", "Ровные"],
+    ["textured", "Текстурированные"],
+    ["soft", "Мягкие"],
   ],
 
   colorDepth: [
@@ -88,6 +135,7 @@ const options = {
   ],
 
   coloring: [
+    ["none", "Без окрашивания"],
     ["solid", "Однотонное"],
     ["highlighting", "Мелирование"],
     ["balayage", "Балаяж"],
@@ -112,6 +160,9 @@ export default function Home() {
 
   const [gender, setGender] = useState("male");
 
+  const [maleCut, setMaleCut] = useState("classic");
+  const [femaleCut, setFemaleCut] = useState("long-bob");
+
   const [length, setLength] = useState("medium");
   const [structure, setStructure] = useState("straight");
   const [bangs, setBangs] = useState("none");
@@ -119,10 +170,16 @@ export default function Home() {
   const [volume, setVolume] = useState("natural");
   const [styling, setStyling] = useState("natural");
 
+  const [temples, setTemples] = useState("natural");
+  const [nape, setNape] = useState("natural");
+
+  const [layers, setLayers] = useState("soft");
+  const [ends, setEnds] = useState("straight");
+
   const [colorDepth, setColorDepth] = useState("5");
   const [colorTone, setColorTone] = useState("natural");
   const [colorIntensity, setColorIntensity] = useState("medium");
-  const [coloring, setColoring] = useState("solid");
+  const [coloring, setColoring] = useState("none");
   const [roots, setRoots] = useState("same");
 
   const [loading, setLoading] = useState(false);
@@ -161,12 +218,23 @@ export default function Home() {
       formData.append("image", file);
       formData.append("gender", gender);
 
+      formData.append(
+        "cut",
+        gender === "male" ? maleCut : femaleCut
+      );
+
       formData.append("length", length);
       formData.append("structure", structure);
       formData.append("bangs", bangs);
       formData.append("parting", parting);
       formData.append("volume", volume);
       formData.append("styling", styling);
+
+      formData.append("temples", temples);
+      formData.append("nape", nape);
+
+      formData.append("layers", layers);
+      formData.append("ends", ends);
 
       formData.append("colorDepth", colorDepth);
       formData.append("colorTone", colorTone);
@@ -212,8 +280,8 @@ export default function Home() {
         </h1>
 
         <p>
-          Загрузите фотографию — выберите параметры —
-          получите реалистичную визуализацию.
+          Загрузите фотографию — настройте параметры —
+          получите визуализацию.
         </p>
       </section>
 
@@ -268,6 +336,23 @@ export default function Home() {
             setValue={setGender}
           />
 
+          <h3 className="parameter-title">Стрижка</h3>
+
+          <Group
+            title="Форма"
+            options={
+              gender === "male"
+                ? options.maleCut
+                : options.femaleCut
+            }
+            value={gender === "male" ? maleCut : femaleCut}
+            setValue={
+              gender === "male"
+                ? setMaleCut
+                : setFemaleCut
+            }
+          />
+
           <Group
             title="Длина"
             options={options.length}
@@ -276,11 +361,47 @@ export default function Home() {
           />
 
           <Group
-            title="Структура волос"
+            title="Структура"
             options={options.structure}
             value={structure}
             setValue={setStructure}
           />
+
+          {gender === "male" && (
+            <>
+              <Group
+                title="Виски"
+                options={options.temples}
+                value={temples}
+                setValue={setTemples}
+              />
+
+              <Group
+                title="Затылок"
+                options={options.nape}
+                value={nape}
+                setValue={setNape}
+              />
+            </>
+          )}
+
+          {gender === "female" && (
+            <>
+              <Group
+                title="Слои"
+                options={options.layers}
+                value={layers}
+                setValue={setLayers}
+              />
+
+              <Group
+                title="Концы"
+                options={options.ends}
+                value={ends}
+                setValue={setEnds}
+              />
+            </>
+          )}
 
           <Group
             title="Челка"
@@ -310,44 +431,42 @@ export default function Home() {
             setValue={setStyling}
           />
 
-          <div className="parameter-section">
-            <h3>Цвет волос</h3>
+          <h3 className="parameter-title">Цвет</h3>
 
-            <Group
-              title="Глубина тона (УГТ)"
-              options={options.colorDepth}
-              value={colorDepth}
-              setValue={setColorDepth}
-            />
+          <Group
+            title="Глубина тона / УГТ"
+            options={options.colorDepth}
+            value={colorDepth}
+            setValue={setColorDepth}
+          />
 
-            <Group
-              title="Направление цвета"
-              options={options.colorTone}
-              value={colorTone}
-              setValue={setColorTone}
-            />
+          <Group
+            title="Направление"
+            options={options.colorTone}
+            value={colorTone}
+            setValue={setColorTone}
+          />
 
-            <Group
-              title="Насыщенность"
-              options={options.colorIntensity}
-              value={colorIntensity}
-              setValue={setColorIntensity}
-            />
+          <Group
+            title="Насыщенность"
+            options={options.colorIntensity}
+            value={colorIntensity}
+            setValue={setColorIntensity}
+          />
 
-            <Group
-              title="Техника окрашивания"
-              options={options.coloring}
-              value={coloring}
-              setValue={setColoring}
-            />
+          <Group
+            title="Техника окрашивания"
+            options={options.coloring}
+            value={coloring}
+            setValue={setColoring}
+          />
 
-            <Group
-              title="Корни"
-              options={options.roots}
-              value={roots}
-              setValue={setRoots}
-            />
-          </div>
+          <Group
+            title="Корни"
+            options={options.roots}
+            value={roots}
+            setValue={setRoots}
+          />
 
           <button
             className="generate"
