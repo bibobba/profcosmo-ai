@@ -7,20 +7,101 @@ const options = {
     ["male", "Мужской"],
     ["female", "Женский"],
   ],
+
   length: [
+    ["very-short", "Очень короткая"],
     ["short", "Короткая"],
     ["medium", "Средняя"],
+    ["below-shoulders", "Ниже плеч"],
     ["long", "Длинная"],
   ],
+
   structure: [
     ["straight", "Прямые"],
     ["wavy", "Волнистые"],
     ["curly", "Кудрявые"],
+    ["very-curly", "Очень кудрявые"],
   ],
-  style: [
-    ["classic", "Классический"],
-    ["modern", "Современный"],
-    ["trendy", "Трендовый"],
+
+  bangs: [
+    ["none", "Без челки"],
+    ["straight", "Прямая"],
+    ["side", "Косая"],
+    ["long", "Удлиненная"],
+    ["curtain", "Curtain bangs"],
+    ["short", "Короткая"],
+  ],
+
+  parting: [
+    ["none", "Без выраженного"],
+    ["center", "По центру"],
+    ["left", "Слева"],
+    ["right", "Справа"],
+    ["side", "Боковой"],
+  ],
+
+  volume: [
+    ["low", "Минимальный"],
+    ["natural", "Естественный"],
+    ["medium", "Средний"],
+    ["high", "Максимальный"],
+  ],
+
+  styling: [
+    ["natural", "Естественная"],
+    ["smooth", "Гладкая"],
+    ["textured", "Текстурированная"],
+    ["voluminous", "Объемная"],
+    ["messy", "Небрежная"],
+    ["wet", "Wet look"],
+  ],
+
+  colorDepth: [
+    ["1", "1"],
+    ["2", "2"],
+    ["3", "3"],
+    ["4", "4"],
+    ["5", "5"],
+    ["6", "6"],
+    ["7", "7"],
+    ["8", "8"],
+    ["9", "9"],
+    ["10", "10"],
+  ],
+
+  colorTone: [
+    ["natural", "Натуральный"],
+    ["ash", "Пепельный"],
+    ["beige", "Бежевый"],
+    ["gold", "Золотистый"],
+    ["copper", "Медный"],
+    ["red", "Красный"],
+    ["violet", "Фиолетовый"],
+    ["pearl", "Перламутровый"],
+  ],
+
+  colorIntensity: [
+    ["pastel", "Пастельная"],
+    ["soft", "Мягкая"],
+    ["medium", "Средняя"],
+    ["rich", "Насыщенная"],
+  ],
+
+  coloring: [
+    ["solid", "Однотонное"],
+    ["highlighting", "Мелирование"],
+    ["balayage", "Балаяж"],
+    ["shatush", "Шатуш"],
+    ["airtouch", "AirTouch"],
+    ["ombre", "Омбре"],
+    ["toning", "Тонирование"],
+  ],
+
+  roots: [
+    ["same", "В тон длины"],
+    ["natural", "Натуральные"],
+    ["dark", "Затемненные"],
+    ["stretch", "Растяжка"],
   ],
 };
 
@@ -30,9 +111,19 @@ export default function Home() {
   const [result, setResult] = useState("");
 
   const [gender, setGender] = useState("male");
+
   const [length, setLength] = useState("medium");
   const [structure, setStructure] = useState("straight");
-  const [style, setStyle] = useState("modern");
+  const [bangs, setBangs] = useState("none");
+  const [parting, setParting] = useState("none");
+  const [volume, setVolume] = useState("natural");
+  const [styling, setStyling] = useState("natural");
+
+  const [colorDepth, setColorDepth] = useState("5");
+  const [colorTone, setColorTone] = useState("natural");
+  const [colorIntensity, setColorIntensity] = useState("medium");
+  const [coloring, setColoring] = useState("solid");
+  const [roots, setRoots] = useState("same");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -69,9 +160,19 @@ export default function Home() {
 
       formData.append("image", file);
       formData.append("gender", gender);
+
       formData.append("length", length);
       formData.append("structure", structure);
-      formData.append("style", style);
+      formData.append("bangs", bangs);
+      formData.append("parting", parting);
+      formData.append("volume", volume);
+      formData.append("styling", styling);
+
+      formData.append("colorDepth", colorDepth);
+      formData.append("colorTone", colorTone);
+      formData.append("colorIntensity", colorIntensity);
+      formData.append("coloring", coloring);
+      formData.append("roots", roots);
 
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -182,11 +283,71 @@ export default function Home() {
           />
 
           <Group
-            title="Стиль"
-            options={options.style}
-            value={style}
-            setValue={setStyle}
+            title="Челка"
+            options={options.bangs}
+            value={bangs}
+            setValue={setBangs}
           />
+
+          <Group
+            title="Пробор"
+            options={options.parting}
+            value={parting}
+            setValue={setParting}
+          />
+
+          <Group
+            title="Объем"
+            options={options.volume}
+            value={volume}
+            setValue={setVolume}
+          />
+
+          <Group
+            title="Укладка"
+            options={options.styling}
+            value={styling}
+            setValue={setStyling}
+          />
+
+          <div className="parameter-section">
+            <h3>Цвет волос</h3>
+
+            <Group
+              title="Глубина тона (УГТ)"
+              options={options.colorDepth}
+              value={colorDepth}
+              setValue={setColorDepth}
+            />
+
+            <Group
+              title="Направление цвета"
+              options={options.colorTone}
+              value={colorTone}
+              setValue={setColorTone}
+            />
+
+            <Group
+              title="Насыщенность"
+              options={options.colorIntensity}
+              value={colorIntensity}
+              setValue={setColorIntensity}
+            />
+
+            <Group
+              title="Техника окрашивания"
+              options={options.coloring}
+              value={coloring}
+              setValue={setColoring}
+            />
+
+            <Group
+              title="Корни"
+              options={options.roots}
+              value={roots}
+              setValue={setRoots}
+            />
+          </div>
 
           <button
             className="generate"
