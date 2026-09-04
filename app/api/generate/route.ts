@@ -9,9 +9,102 @@ const replicate = new Replicate({
 
 const allowed = {
   gender: ["male", "female"],
-  length: ["short", "medium", "long"],
-  structure: ["straight", "wavy", "curly"],
-  style: ["classic", "modern", "trendy"],
+
+  length: [
+    "very-short",
+    "short",
+    "medium",
+    "below-shoulders",
+    "long",
+  ],
+
+  structure: [
+    "straight",
+    "wavy",
+    "curly",
+    "very-curly",
+  ],
+
+  bangs: [
+    "none",
+    "straight",
+    "side",
+    "long",
+    "curtain",
+    "short",
+  ],
+
+  parting: [
+    "none",
+    "center",
+    "left",
+    "right",
+    "side",
+  ],
+
+  volume: [
+    "low",
+    "natural",
+    "medium",
+    "high",
+  ],
+
+  styling: [
+    "natural",
+    "smooth",
+    "textured",
+    "voluminous",
+    "messy",
+    "wet",
+  ],
+
+  colorDepth: [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+  ],
+
+  colorTone: [
+    "natural",
+    "ash",
+    "beige",
+    "gold",
+    "copper",
+    "red",
+    "violet",
+    "pearl",
+  ],
+
+  colorIntensity: [
+    "pastel",
+    "soft",
+    "medium",
+    "rich",
+  ],
+
+  coloring: [
+    "solid",
+    "highlighting",
+    "balayage",
+    "shatush",
+    "airtouch",
+    "ombre",
+    "toning",
+  ],
+
+  roots: [
+    "same",
+    "natural",
+    "dark",
+    "stretch",
+  ],
 };
 
 export async function POST(request: NextRequest) {
@@ -29,7 +122,16 @@ export async function POST(request: NextRequest) {
     const gender = formData.get("gender");
     const length = formData.get("length");
     const structure = formData.get("structure");
-    const style = formData.get("style");
+    const bangs = formData.get("bangs");
+    const parting = formData.get("parting");
+    const volume = formData.get("volume");
+    const styling = formData.get("styling");
+
+    const colorDepth = formData.get("colorDepth");
+    const colorTone = formData.get("colorTone");
+    const colorIntensity = formData.get("colorIntensity");
+    const coloring = formData.get("coloring");
+    const roots = formData.get("roots");
 
     if (!(image instanceof File)) {
       return NextResponse.json(
@@ -56,11 +158,35 @@ export async function POST(request: NextRequest) {
       typeof gender !== "string" ||
       typeof length !== "string" ||
       typeof structure !== "string" ||
-      typeof style !== "string" ||
+      typeof bangs !== "string" ||
+      typeof parting !== "string" ||
+      typeof volume !== "string" ||
+      typeof styling !== "string" ||
+      typeof colorDepth !== "string" ||
+      typeof colorTone !== "string" ||
+      typeof colorIntensity !== "string" ||
+      typeof coloring !== "string" ||
+      typeof roots !== "string"
+    ) {
+      return NextResponse.json(
+        { error: "Не все параметры заполнены" },
+        { status: 400 }
+      );
+    }
+
+    if (
       !allowed.gender.includes(gender) ||
       !allowed.length.includes(length) ||
       !allowed.structure.includes(structure) ||
-      !allowed.style.includes(style)
+      !allowed.bangs.includes(bangs) ||
+      !allowed.parting.includes(parting) ||
+      !allowed.volume.includes(volume) ||
+      !allowed.styling.includes(styling) ||
+      !allowed.colorDepth.includes(colorDepth) ||
+      !allowed.colorTone.includes(colorTone) ||
+      !allowed.colorIntensity.includes(colorIntensity) ||
+      !allowed.coloring.includes(coloring) ||
+      !allowed.roots.includes(roots)
     ) {
       return NextResponse.json(
         { error: "Выберите корректные параметры" },
@@ -73,13 +199,15 @@ export async function POST(request: NextRequest) {
     const inputImage = `data:${image.type};base64,${base64}`;
 
     const genderText: Record<string, string> = {
-      male: "MALE PERSON / MAN",
-      female: "FEMALE PERSON / WOMAN",
+      male: "male person / man",
+      female: "female person / woman",
     };
 
     const lengthText: Record<string, string> = {
+      "very-short": "very short",
       short: "short",
-      medium: "medium-length",
+      medium: "medium length",
+      "below-shoulders": "below the shoulders",
       long: "long",
     };
 
@@ -87,120 +215,208 @@ export async function POST(request: NextRequest) {
       straight: "straight",
       wavy: "wavy",
       curly: "curly",
+      "very-curly": "very curly",
     };
 
-    const styleText: Record<string, string> = {
-      classic: "classic professional",
-      modern: "modern contemporary",
-      trendy: "fashion-forward trendy",
+    const bangsText: Record<string, string> = {
+      none: "no bangs",
+      straight: "straight bangs",
+      side: "side-swept bangs",
+      long: "long bangs",
+      curtain: "curtain bangs",
+      short: "short bangs",
+    };
+
+    const partingText: Record<string, string> = {
+      none: "no defined parting",
+      center: "center part",
+      left: "left side part",
+      right: "right side part",
+      side: "side part",
+    };
+
+    const volumeText: Record<string, string> = {
+      low: "minimal volume",
+      natural: "natural volume",
+      medium: "medium volume",
+      high: "high volume",
+    };
+
+    const stylingText: Record<string, string> = {
+      natural: "natural styling",
+      smooth: "smooth styling",
+      textured: "textured styling",
+      voluminous: "voluminous styling",
+      messy: "messy effortless styling",
+      wet: "wet look styling",
+    };
+
+    const colorToneText: Record<string, string> = {
+      natural: "natural",
+      ash: "ash",
+      beige: "beige",
+      gold: "golden",
+      copper: "copper",
+      red: "red",
+      violet: "violet",
+      pearl: "pearl",
+    };
+
+    const colorIntensityText: Record<string, string> = {
+      pastel: "pastel",
+      soft: "soft",
+      medium: "medium",
+      rich: "rich",
+    };
+
+    const coloringText: Record<string, string> = {
+      solid: "solid color",
+      highlighting: "highlighting",
+      balayage: "balayage",
+      shatush: "shatush",
+      airtouch: "AirTouch",
+      ombre: "ombre",
+      toning: "toning",
+    };
+
+    const rootsText: Record<string, string> = {
+      same: "roots matching the lengths",
+      natural: "natural roots",
+      dark: "darker roots",
+      stretch: "soft root color transition",
     };
 
     const prompt = `
 EDIT THE PROVIDED PHOTO.
+
 DO NOT CREATE A NEW PERSON.
 
-THIS IS A PROFESSIONAL HAIRSTYLE VISUALIZATION.
+This is a professional hairstyle and hair-color visualization.
 
-The selected client gender is:
-${genderText[gender]}
+The person MUST remain the exact same person as in the input photograph.
 
-THIS GENDER MUST NOT CHANGE.
-
-If the input is a man, the output MUST remain a MAN.
-If the input is a woman, the output MUST remain a WOMAN.
-
-DO NOT CHANGE THE PERSON'S SEX.
-DO NOT CHANGE THE PERSON'S GENDER PRESENTATION.
-DO NOT FEMINIZE A MAN.
-DO NOT MASCULINIZE A WOMAN.
+CLIENT:
+Gender: ${genderText[gender]}
 
 IDENTITY PRESERVATION IS THE HIGHEST PRIORITY.
 
-Keep the EXACT SAME PERSON from the input photograph.
+Preserve exactly:
+- facial identity;
+- face shape;
+- eyes;
+- eyebrows;
+- nose;
+- lips;
+- jaw;
+- ears;
+- skin;
+- skin tone;
+- age;
+- body;
+- neck;
+- shoulders;
+- clothing;
+- pose;
+- head position;
+- camera angle;
+- framing;
+- lighting;
+- background.
 
-PRESERVE:
-- same identity;
-- same face;
-- same facial structure;
-- same eyes;
-- same eyebrows;
-- same nose;
-- same mouth;
-- same lips;
-- same jaw;
-- same ears;
-- same skin;
-- same skin tone;
-- same age;
-- same body;
-- same neck;
-- same shoulders;
-- same clothing;
-- same pose;
-- same head position;
-- same camera angle;
-- same framing;
-- same lighting;
-- same background.
+DO NOT regenerate the face.
 
-DO NOT REGENERATE THE FACE.
+DO NOT beautify the face.
 
-DO NOT BEAUTIFY THE PERSON.
+DO NOT alter facial features.
 
-DO NOT ALTER THE FACE.
+DO NOT change facial proportions.
 
-DO NOT CHANGE FACIAL PROPORTIONS.
+DO NOT change age.
 
-DO NOT CHANGE THE PERSON'S AGE.
+DO NOT change body proportions.
 
-DO NOT CHANGE THE PERSON'S BODY.
+DO NOT change clothing.
 
-DO NOT CHANGE THE CLOTHING.
+DO NOT change the background.
 
-DO NOT CHANGE THE BACKGROUND.
+DO NOT change the person's sex or gender.
 
-ONLY EDIT THE HAIR.
+If the input person is male, the result MUST remain male.
 
-REQUESTED HAIRSTYLE:
+If the input person is female, the result MUST remain female.
+
+ONLY MODIFY THE HAIR.
+
+HAIRSTYLE SPECIFICATION:
 
 Gender:
 ${genderText[gender]}
 
-Hair length:
+Length:
 ${lengthText[length]}
 
 Hair structure:
 ${structureText[structure]}
 
-Hair style:
-${styleText[style]}
+Bangs:
+${bangsText[bangs]}
 
-The new hairstyle must be appropriate for the selected gender.
+Parting:
+${partingText[parting]}
 
-The new hair must:
-- follow the existing head shape;
+Volume:
+${volumeText[volume]}
+
+Styling:
+${stylingText[styling]}
+
+HAIR COLOR SPECIFICATION:
+
+Depth of tone / UGT:
+Level ${colorDepth} on the professional 1–10 hair color depth scale.
+
+Color direction:
+${colorToneText[colorTone]}
+
+Color intensity:
+${colorIntensityText[colorIntensity]}
+
+Coloring technique:
+${coloringText[coloring]}
+
+Roots:
+${rootsText[roots]}
+
+The hairstyle and color must look professionally executed.
+
+The hair must:
 - follow the existing hairline;
-- connect naturally to the existing hair;
+- follow the existing head shape;
 - have realistic density;
+- have realistic individual strands;
+- have realistic texture;
 - have realistic volume;
-- have realistic strands;
 - have realistic shadows;
-- look like real human hair;
-- look professionally cut and styled.
+- have natural transitions;
+- look like real human hair.
 
 The result must look like the SAME PERSON
 in the SAME PHOTOGRAPH
-after receiving a professional haircut.
+after a professional haircut, styling and hair-color service.
 
-THE ONLY INTENTIONAL CHANGE IS THE HAIRSTYLE.
+THE ONLY INTENTIONAL CHANGES ARE:
+1. hairstyle;
+2. hair color.
 
-CRITICAL:
-DO NOT TURN A MAN INTO A WOMAN.
-DO NOT TURN A WOMAN INTO A MAN.
-DO NOT CHANGE SEX.
-DO NOT CHANGE GENDER.
+EVERYTHING ELSE MUST REMAIN UNCHANGED.
+
 DO NOT CHANGE IDENTITY.
 DO NOT CHANGE FACE.
+DO NOT CHANGE SEX.
+DO NOT CHANGE GENDER.
+DO NOT CHANGE BODY.
+DO NOT CHANGE CLOTHING.
+DO NOT CHANGE BACKGROUND.
 
 HAIR ONLY.
 `;
