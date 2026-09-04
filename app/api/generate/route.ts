@@ -69,82 +69,111 @@ export async function POST(request: NextRequest) {
     const inputImage = `data:${image.type};base64,${base64}`;
 
     const lengthText: Record<string, string> = {
-      short: "short",
-      medium: "medium-length",
-      long: "long",
+      short: "short professional haircut",
+      medium: "medium-length professional hairstyle",
+      long: "long professional hairstyle",
     };
 
     const structureText: Record<string, string> = {
-      straight: "straight",
-      wavy: "wavy",
-      curly: "curly",
+      straight: "straight hair",
+      wavy: "wavy hair",
+      curly: "curly hair",
     };
 
     const styleText: Record<string, string> = {
-      classic: "classic professional",
-      modern: "modern contemporary",
-      trendy: "fashion-forward trendy",
+      classic: "classic professional style",
+      modern: "modern contemporary style",
+      trendy: "fashion-forward trendy style",
     };
 
     const prompt = `
-Edit this photograph of a real person to visualize a new hairstyle.
+EDIT THE PROVIDED PHOTO.
+DO NOT GENERATE A NEW PERSON.
 
-IDENTITY PRESERVATION IS THE HIGHEST PRIORITY.
+THIS IS A HAIR-ONLY EDIT.
 
-Keep exactly the same person and preserve:
-- facial identity;
-- face shape;
-- eyes;
-- eyebrows;
-- nose;
-- mouth;
-- skin tone;
-- age;
-- facial expression;
-- head position;
-- body proportions;
-- clothing;
-- camera angle;
-- lighting;
-- background.
+The person in the input image MUST remain the exact same person.
 
-Do NOT regenerate, beautify, reshape or alter the person's face.
+PRESERVE THE ORIGINAL PERSON EXACTLY:
+- same biological sex
+- same gender presentation
+- same face
+- same facial identity
+- same facial proportions
+- same eyes
+- same eyebrows
+- same nose
+- same lips
+- same jaw
+- same ears
+- same skin tone
+- same age
+- same body
+- same neck
+- same shoulders
+- same clothing
+- same pose
+- same head position
+- same camera angle
+- same framing
+- same lighting
+- same background
+- same photograph composition
 
-The ONLY major intentional change must be the hairstyle.
+DO NOT TURN THE PERSON INTO A DIFFERENT PERSON.
 
-Create a realistic professional hairstyle visualization.
+DO NOT CHANGE THE PERSON'S SEX OR GENDER.
 
-Requested hairstyle:
-Hair length: ${lengthText[length]}.
-Hair structure: ${structureText[structure]}.
-Style: ${styleText[style]}.
+DO NOT FEMINIZE A MALE PERSON.
+DO NOT MASCULINIZE A FEMALE PERSON.
 
-The new hairstyle must naturally follow the person's existing hairline,
-head shape and facial proportions.
+DO NOT BEAUTIFY THE FACE.
+DO NOT MODIFY THE FACE.
+DO NOT REGENERATE THE FACE.
+DO NOT CHANGE FACIAL FEATURES.
 
-Make the hair photorealistic:
-- natural hairline;
-- realistic individual strands;
-- realistic density;
-- realistic volume;
-- realistic texture;
-- natural shadows;
-- physically plausible hair.
-
-The final image must look like a real photograph of the SAME PERSON
-after a professional haircut and styling.
-
-Do not add accessories.
-Do not change clothing.
-Do not change the background unnecessarily.
-Do not change facial expression.
-Do not change the person's identity.
+The original face must remain visually identical to the input photograph.
 
 ONLY CHANGE THE HAIR.
+
+Requested hairstyle:
+
+Length: ${lengthText[length]}
+Hair texture: ${structureText[structure]}
+Style: ${styleText[style]}
+
+The new hairstyle must:
+- grow naturally from the existing hairline;
+- follow the existing head shape;
+- match the person's existing hair color unless necessary;
+- have realistic density;
+- have realistic individual strands;
+- have realistic shadows;
+- have realistic volume;
+- look physically plausible;
+- look like professionally cut and styled real hair.
+
+The final result must look like:
+THE SAME ORIGINAL PHOTOGRAPH
+OF THE SAME PERSON
+AFTER A PROFESSIONAL HAIRCUT.
+
+The hairstyle is the ONLY intentional change.
+
+NO changes to the face.
+NO changes to the body.
+NO changes to clothing.
+NO changes to pose.
+NO changes to background.
+NO changes to lighting.
+NO changes to identity.
+NO changes to sex or gender.
+
+HAIR ONLY.
 `;
 
     const output = await replicate.run(
-      "black-forest-labs/flux-kontext-pro",
+      "black-forest-labs/flux-kontext-max",
       {
         input: {
           prompt,
