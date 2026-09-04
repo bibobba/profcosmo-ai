@@ -2,245 +2,323 @@
 
 import { useState } from "react";
 
-const options = {
-  gender: [
-    ["male", "Мужской"],
-    ["female", "Женский"],
-  ],
+type Option = {
+  value: string;
+  label: string;
+};
 
-  maleCut: [
-    ["classic", "Классическая"],
-    ["crop", "Crop"],
-    ["fade", "Fade"],
-    ["taper", "Taper"],
-    ["undercut", "Undercut"],
-    ["textured", "Текстурированная"],
-  ],
+const lengths: Option[] = [
+  { value: "very-short", label: "Очень короткая" },
+  { value: "short", label: "Короткая" },
+  { value: "medium", label: "Средняя" },
+  { value: "below-shoulders", label: "Ниже плеч" },
+  { value: "long", label: "Длинная" },
+];
 
-  femaleCut: [
-    ["bob", "Боб"],
-    ["long-bob", "Лонг-боб"],
-    ["square", "Каре"],
-    ["pixie", "Пикси"],
-    ["cascade", "Каскад"],
-    ["shag", "Шэг"],
-    ["layered", "Слои"],
-    ["straight-cut", "Ровный срез"],
-  ],
+const structures: Option[] = [
+  { value: "straight", label: "Прямые" },
+  { value: "wavy", label: "Волнистые" },
+  { value: "curly", label: "Кудрявые" },
+  { value: "afro-curls", label: "Афро-кудри" },
+];
 
-  length: [
-    ["very-short", "Очень короткая"],
-    ["short", "Короткая"],
-    ["medium", "Средняя"],
-    ["below-shoulders", "Ниже плеч"],
-    ["long", "Длинная"],
-  ],
+const femaleBangs: Option[] = [
+  { value: "none", label: "Без чёлки" },
+  { value: "straight", label: "Прямая" },
+  { value: "side", label: "Боковая" },
+  { value: "long", label: "Длинная" },
+  { value: "curtain", label: "Шторка" },
+  { value: "short", label: "Короткая" },
+];
 
-  structure: [
-    ["straight", "Прямые"],
-    ["wavy", "Волнистые"],
-    ["curly", "Кудрявые"],
-    ["very-curly", "Очень кудрявые"],
-  ],
+const femalePartings: Option[] = [
+  { value: "center", label: "Центральный" },
+  { value: "left", label: "Слева" },
+  { value: "right", label: "Справа" },
+  { value: "none", label: "Без выраженного пробора" },
+];
 
-  bangs: [
-    ["none", "Без челки"],
-    ["straight", "Прямая"],
-    ["side", "Косая"],
-    ["long", "Удлиненная"],
-    ["curtain", "Curtain"],
-    ["short", "Короткая"],
-  ],
+const volumes: Option[] = [
+  { value: "low", label: "Низкий" },
+  { value: "natural", label: "Естественный" },
+  { value: "medium", label: "Средний" },
+  { value: "high", label: "Высокий" },
+];
 
-  parting: [
-    ["none", "Без выраженного"],
-    ["center", "Центральный"],
-    ["left", "Слева"],
-    ["right", "Справа"],
-    ["side", "Боковой"],
-  ],
+const stylings: Option[] = [
+  { value: "natural", label: "Естественная" },
+  { value: "smooth", label: "Гладкая" },
+  { value: "textured", label: "Текстурная" },
+  { value: "voluminous", label: "Объёмная" },
+  { value: "messy", label: "Небрежная" },
+  { value: "wet", label: "Влажный эффект" },
+];
 
-  volume: [
-    ["low", "Минимальный"],
-    ["natural", "Естественный"],
-    ["medium", "Средний"],
-    ["high", "Максимальный"],
-  ],
+const ends: Option[] = [
+  { value: "straight", label: "Прямые" },
+  { value: "textured", label: "Текстурированные" },
+  { value: "soft", label: "Мягкие" },
+];
 
-  styling: [
-    ["natural", "Естественная"],
-    ["smooth", "Гладкая"],
-    ["textured", "Текстурированная"],
-    ["voluminous", "Объемная"],
-    ["messy", "Небрежная"],
-    ["wet", "Wet look"],
-  ],
+const maleForms: Option[] = [
+  { value: "classic", label: "Классическая" },
+  { value: "crop", label: "Crop" },
+  { value: "fade", label: "Fade" },
+  { value: "taper", label: "Taper" },
+  { value: "undercut", label: "Undercut" },
+  { value: "textured", label: "Текстурированная" },
+  { value: "elongated", label: "Удлинённая" },
+];
 
-  temples: [
-    ["natural", "Естественные"],
-    ["short", "Короткие"],
-    ["fade", "Fade"],
-    ["skin-fade", "Skin fade"],
-  ],
+const temples: Option[] = [
+  { value: "slanted", label: "Косые" },
+  { value: "straight", label: "Прямые" },
+  { value: "skin-fade", label: "Skin fade" },
+];
 
-  nape: [
-    ["natural", "Естественный"],
-    ["short", "Короткий"],
-    ["taper", "Taper"],
-    ["fade", "Fade"],
-  ],
+const coloringTechniques: Option[] = [
+  { value: "none", label: "Без окрашивания" },
+  { value: "solid", label: "Однотонное" },
+  { value: "highlighting", label: "Мелирование" },
+  { value: "balayage", label: "Balayage" },
+  { value: "shatush", label: "Shatush" },
+  { value: "airtouch", label: "AirTouch" },
+  { value: "ombre", label: "Ombre" },
+  { value: "toning", label: "Тонирование" },
+  { value: "gray-camouflage", label: "Камуфляж седины" },
+  { value: "blond", label: "Блонд" },
+];
 
-  layers: [
-    ["none", "Без слоев"],
-    ["soft", "Мягкие"],
-    ["medium", "Средние"],
-    ["pronounced", "Выраженные"],
-  ],
+const toneLevels = Array.from({ length: 10 }, (_, i) => ({
+  value: String(i + 1),
+  label: `${i + 1} тон`,
+}));
 
-  ends: [
-    ["straight", "Ровные"],
-    ["textured", "Текстурированные"],
-    ["soft", "Мягкие"],
+/**
+ * Здесь пока используются универсальные названия оттенков.
+ * Когда дадим точную палитру Insight, этот массив заменяется
+ * на реальные оттенки бренда для каждого уровня тона.
+ */
+const shadesByTone: Record<string, Option[]> = {
+  "1": [
+    { value: "natural", label: "Натуральный" },
+    { value: "ash", label: "Пепельный" },
   ],
-
-  colorDepth: [
-    ["1", "1"],
-    ["2", "2"],
-    ["3", "3"],
-    ["4", "4"],
-    ["5", "5"],
-    ["6", "6"],
-    ["7", "7"],
-    ["8", "8"],
-    ["9", "9"],
-    ["10", "10"],
+  "2": [
+    { value: "natural", label: "Натуральный" },
+    { value: "ash", label: "Пепельный" },
   ],
-
-  colorTone: [
-    ["natural", "Натуральный"],
-    ["ash", "Пепельный"],
-    ["beige", "Бежевый"],
-    ["gold", "Золотистый"],
-    ["copper", "Медный"],
-    ["red", "Красный"],
-    ["violet", "Фиолетовый"],
-    ["pearl", "Перламутровый"],
+  "3": [
+    { value: "natural", label: "Натуральный" },
+    { value: "ash", label: "Пепельный" },
+    { value: "beige", label: "Бежевый" },
   ],
-
-  colorIntensity: [
-    ["pastel", "Пастельная"],
-    ["soft", "Мягкая"],
-    ["medium", "Средняя"],
-    ["rich", "Насыщенная"],
+  "4": [
+    { value: "natural", label: "Натуральный" },
+    { value: "ash", label: "Пепельный" },
+    { value: "beige", label: "Бежевый" },
+    { value: "gold", label: "Золотистый" },
   ],
-
-  coloring: [
-    ["none", "Без окрашивания"],
-    ["solid", "Однотонное"],
-    ["highlighting", "Мелирование"],
-    ["balayage", "Балаяж"],
-    ["shatush", "Шатуш"],
-    ["airtouch", "AirTouch"],
-    ["ombre", "Омбре"],
-    ["toning", "Тонирование"],
+  "5": [
+    { value: "natural", label: "Натуральный" },
+    { value: "ash", label: "Пепельный" },
+    { value: "beige", label: "Бежевый" },
+    { value: "gold", label: "Золотистый" },
+    { value: "copper", label: "Медный" },
   ],
-
-  roots: [
-    ["same", "В тон длины"],
-    ["natural", "Натуральные"],
-    ["dark", "Затемненные"],
-    ["stretch", "Растяжка"],
+  "6": [
+    { value: "natural", label: "Натуральный" },
+    { value: "ash", label: "Пепельный" },
+    { value: "beige", label: "Бежевый" },
+    { value: "gold", label: "Золотистый" },
+    { value: "copper", label: "Медный" },
+    { value: "red", label: "Красный" },
+  ],
+  "7": [
+    { value: "natural", label: "Натуральный" },
+    { value: "ash", label: "Пепельный" },
+    { value: "beige", label: "Бежевый" },
+    { value: "gold", label: "Золотистый" },
+    { value: "copper", label: "Медный" },
+  ],
+  "8": [
+    { value: "natural", label: "Натуральный" },
+    { value: "ash", label: "Пепельный" },
+    { value: "beige", label: "Бежевый" },
+    { value: "gold", label: "Золотистый" },
+    { value: "pearl", label: "Перламутровый" },
+  ],
+  "9": [
+    { value: "natural", label: "Натуральный" },
+    { value: "ash", label: "Пепельный" },
+    { value: "beige", label: "Бежевый" },
+    { value: "gold", label: "Золотистый" },
+    { value: "pearl", label: "Перламутровый" },
+  ],
+  "10": [
+    { value: "natural", label: "Натуральный" },
+    { value: "ash", label: "Пепельный" },
+    { value: "beige", label: "Бежевый" },
+    { value: "pearl", label: "Перламутровый" },
   ],
 };
 
+function OptionGroup({
+  title,
+  options,
+  value,
+  onChange,
+}: {
+  title: string;
+  options: Option[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="option-group">
+      <h3>{title}</h3>
+
+      <div className="options">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`option ${
+              value === option.value ? "option-active" : ""
+            }`}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState("");
-  const [result, setResult] = useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string>("");
 
-  const [gender, setGender] = useState("male");
-
-  const [maleCut, setMaleCut] = useState("classic");
-  const [femaleCut, setFemaleCut] = useState("long-bob");
+  const [gender, setGender] = useState<"female" | "male">("female");
 
   const [length, setLength] = useState("medium");
   const [structure, setStructure] = useState("straight");
-  const [bangs, setBangs] = useState("none");
-  const [parting, setParting] = useState("none");
-  const [volume, setVolume] = useState("natural");
-  const [styling, setStyling] = useState("natural");
 
-  const [temples, setTemples] = useState("natural");
-  const [nape, setNape] = useState("natural");
+  const [femaleBang, setFemaleBang] = useState("none");
+  const [femaleParting, setFemaleParting] = useState("none");
+  const [femaleVolume, setFemaleVolume] = useState("natural");
+  const [femaleStyling, setFemaleStyling] = useState("natural");
+  const [femaleEnds, setFemaleEnds] = useState("straight");
 
-  const [layers, setLayers] = useState("soft");
-  const [ends, setEnds] = useState("straight");
+  const [maleForm, setMaleForm] = useState("classic");
+  const [maleTemples, setMaleTemples] = useState("straight");
 
-  const [colorDepth, setColorDepth] = useState("5");
-  const [colorTone, setColorTone] = useState("natural");
-  const [colorIntensity, setColorIntensity] = useState("medium");
+  const [colorDepth, setColorDepth] = useState("");
+  const [colorShade, setColorShade] = useState("");
   const [coloring, setColoring] = useState("none");
-  const [roots, setRoots] = useState("same");
 
+  const [resultImages, setResultImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  function handleFile(selected: File) {
-    if (!selected.type.startsWith("image/")) {
-      setError("Загрузите изображение");
-      return;
-    }
+  const availableShades = colorDepth
+    ? shadesByTone[colorDepth] || []
+    : [];
 
-    if (selected.size > 8 * 1024 * 1024) {
-      setError("Максимальный размер — 8 МБ");
-      return;
-    }
+  function handleImage(file: File | null) {
+    if (!file) return;
 
-    setFile(selected);
-    setPreview(URL.createObjectURL(selected));
-    setResult("");
+    setImage(file);
+    setPreview(URL.createObjectURL(file));
+    setResultImages([]);
     setError("");
   }
 
+  function resetForGender(nextGender: "female" | "male") {
+    setGender(nextGender);
+
+    setLength("medium");
+    setStructure("straight");
+
+    if (nextGender === "female") {
+      setFemaleBang("none");
+      setFemaleParting("none");
+      setFemaleVolume("natural");
+      setFemaleStyling("natural");
+      setFemaleEnds("straight");
+    } else {
+      setMaleForm("classic");
+      setMaleTemples("straight");
+    }
+  }
+
   async function generate() {
-    if (!file) {
-      setError("Сначала загрузите фотографию");
+    if (!image) {
+      setError("Сначала загрузите фотографию.");
+      return;
+    }
+
+    if (!colorDepth) {
+      setError("Выберите уровень тона.");
+      return;
+    }
+
+    if (!colorShade) {
+      setError("Выберите оттенок.");
+      return;
+    }
+
+    if (!coloring) {
+      setError("Выберите технику окрашивания.");
       return;
     }
 
     setLoading(true);
     setError("");
-    setResult("");
+    setResultImages([]);
 
     try {
       const formData = new FormData();
 
-      formData.append("image", file);
+      formData.append("image", image);
       formData.append("gender", gender);
-
-      formData.append(
-        "cut",
-        gender === "male" ? maleCut : femaleCut
-      );
 
       formData.append("length", length);
       formData.append("structure", structure);
-      formData.append("bangs", bangs);
-      formData.append("parting", parting);
-      formData.append("volume", volume);
-      formData.append("styling", styling);
 
-      formData.append("temples", temples);
-      formData.append("nape", nape);
+      if (gender === "female") {
+        formData.append("bangs", femaleBang);
+        formData.append("parting", femaleParting);
+        formData.append("volume", femaleVolume);
+        formData.append("styling", femaleStyling);
+        formData.append("ends", femaleEnds);
 
-      formData.append("layers", layers);
-      formData.append("ends", ends);
+        formData.append("maleForm", "");
+        formData.append("temples", "");
+      } else {
+        formData.append("maleForm", maleForm);
+        formData.append("temples", maleTemples);
+
+        formData.append("bangs", "");
+        formData.append("parting", "");
+        formData.append("volume", "");
+        formData.append("styling", "");
+        formData.append("ends", "");
+      }
 
       formData.append("colorDepth", colorDepth);
-      formData.append("colorTone", colorTone);
-      formData.append("colorIntensity", colorIntensity);
+      formData.append("colorShade", colorShade);
       formData.append("coloring", coloring);
-      formData.append("roots", roots);
+
+      /**
+       * Просим backend вернуть несколько вариантов.
+       * Основная логика:
+       * цвет сохраняется,
+       * структура сохраняется,
+       * варианты отличаются прежде всего длиной/формой.
+       */
+      formData.append("variants", "3");
 
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -249,14 +327,28 @@ export default function Home() {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Ошибка генерации");
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error || "Не удалось создать варианты прически."
+        );
       }
 
-      setResult(data.imageUrl);
-    } catch (e) {
+      const images = Array.isArray(data.imageUrls)
+        ? data.imageUrls
+        : data.imageUrl
+        ? [data.imageUrl]
+        : [];
+
+      if (!images.length) {
+        throw new Error("AI не вернул изображения.");
+      }
+
+      setResultImages(images);
+    } catch (err) {
       setError(
-        e instanceof Error ? e.message : "Ошибка генерации"
+        err instanceof Error
+          ? err.message
+          : "Произошла ошибка при генерации."
       );
     } finally {
       setLoading(false);
@@ -264,296 +356,203 @@ export default function Home() {
   }
 
   return (
-    <main>
-      <header>
-        <b>ПРОФКОСМО AI</b>
-        <span>AI-подбор прически</span>
-      </header>
+    <main className="page">
+      <div className="container">
+        <header className="header">
+          <div>
+            <h1>ПРОФКОСМО AI</h1>
+            <p>ИИ-подбор прически</p>
+          </div>
+        </header>
 
-      <section className="hero">
-        <div className="eyebrow">ВИРТУАЛЬНАЯ ПРИМЕРКА</div>
+        <section className="card">
+          <h2>1. Фотография</h2>
 
-        <h1>
-          Подберите прическу
-          <br />
-          <em>с помощью ИИ</em>
-        </h1>
-
-        <p>
-          Загрузите фотографию — настройте параметры —
-          получите визуализацию.
-        </p>
-      </section>
-
-      <section className="grid">
-        <div className="card">
-          <h2>01 — Фотография</h2>
-
-          <label
-            className="upload"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-
-              const dropped = e.dataTransfer.files[0];
-
-              if (dropped) {
-                handleFile(dropped);
-              }
-            }}
-          >
+          <label className="upload">
             {preview ? (
-              <img src={preview} alt="Фото клиента" />
+              <img src={preview} alt="Загруженная фотография" />
             ) : (
-              <>
-                <div className="plus">+</div>
-                <strong>Загрузите фотографию</strong>
-                <small>JPG, PNG или WEBP · до 8 МБ</small>
-              </>
+              <div>
+                <strong>Загрузить фотографию</strong>
+                <span>Лучше использовать фото анфас</span>
+              </div>
             )}
 
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => {
-                const selected = e.target.files?.[0];
-
-                if (selected) {
-                  handleFile(selected);
-                }
-              }}
+              accept="image/*"
+              onChange={(e) =>
+                handleImage(e.target.files?.[0] || null)
+              }
             />
           </label>
-        </div>
+        </section>
 
-        <div className="card">
-          <h2>02 — Параметры</h2>
+        <section className="card">
+          <h2>2. Параметры</h2>
 
-          <Group
+          <OptionGroup
             title="Пол"
-            options={options.gender}
+            options={[
+              { value: "female", label: "Женская" },
+              { value: "male", label: "Мужская" },
+            ]}
             value={gender}
-            setValue={setGender}
-          />
-
-          <h3 className="parameter-title">Стрижка</h3>
-
-          <Group
-            title="Форма"
-            options={
-              gender === "male"
-                ? options.maleCut
-                : options.femaleCut
-            }
-            value={gender === "male" ? maleCut : femaleCut}
-            setValue={
-              gender === "male"
-                ? setMaleCut
-                : setFemaleCut
+            onChange={(value) =>
+              resetForGender(value as "female" | "male")
             }
           />
 
-          <Group
+          <OptionGroup
             title="Длина"
-            options={options.length}
+            options={lengths}
             value={length}
-            setValue={setLength}
+            onChange={setLength}
           />
 
-          <Group
-            title="Структура"
-            options={options.structure}
+          <OptionGroup
+            title="Структура волос"
+            options={structures}
             value={structure}
-            setValue={setStructure}
+            onChange={setStructure}
           />
 
-          {gender === "male" && (
+          {gender === "female" ? (
             <>
-              <Group
-                title="Виски"
-                options={options.temples}
-                value={temples}
-                setValue={setTemples}
+              <OptionGroup
+                title="Чёлка"
+                options={femaleBangs}
+                value={femaleBang}
+                onChange={setFemaleBang}
               />
 
-              <Group
-                title="Затылок"
-                options={options.nape}
-                value={nape}
-                setValue={setNape}
-              />
-            </>
-          )}
-
-          {gender === "female" && (
-            <>
-              <Group
-                title="Слои"
-                options={options.layers}
-                value={layers}
-                setValue={setLayers}
+              <OptionGroup
+                title="Пробор"
+                options={femalePartings}
+                value={femaleParting}
+                onChange={setFemaleParting}
               />
 
-              <Group
+              <OptionGroup
+                title="Объём"
+                options={volumes}
+                value={femaleVolume}
+                onChange={setFemaleVolume}
+              />
+
+              <OptionGroup
+                title="Укладка"
+                options={stylings}
+                value={femaleStyling}
+                onChange={setFemaleStyling}
+              />
+
+              <OptionGroup
                 title="Концы"
-                options={options.ends}
-                value={ends}
-                setValue={setEnds}
+                options={ends}
+                value={femaleEnds}
+                onChange={setFemaleEnds}
               />
             </>
-          )}
-
-          <Group
-            title="Челка"
-            options={options.bangs}
-            value={bangs}
-            setValue={setBangs}
-          />
-
-          <Group
-            title="Пробор"
-            options={options.parting}
-            value={parting}
-            setValue={setParting}
-          />
-
-          <Group
-            title="Объем"
-            options={options.volume}
-            value={volume}
-            setValue={setVolume}
-          />
-
-          <Group
-            title="Укладка"
-            options={options.styling}
-            value={styling}
-            setValue={setStyling}
-          />
-
-          <h3 className="parameter-title">Цвет</h3>
-
-          <Group
-            title="Глубина тона / УГТ"
-            options={options.colorDepth}
-            value={colorDepth}
-            setValue={setColorDepth}
-          />
-
-          <Group
-            title="Направление"
-            options={options.colorTone}
-            value={colorTone}
-            setValue={setColorTone}
-          />
-
-          <Group
-            title="Насыщенность"
-            options={options.colorIntensity}
-            value={colorIntensity}
-            setValue={setColorIntensity}
-          />
-
-          <Group
-            title="Техника окрашивания"
-            options={options.coloring}
-            value={coloring}
-            setValue={setColoring}
-          />
-
-          <Group
-            title="Корни"
-            options={options.roots}
-            value={roots}
-            setValue={setRoots}
-          />
-
-          <button
-            className="generate"
-            disabled={!file || loading}
-            onClick={generate}
-          >
-            {loading
-              ? "Создаём визуализацию..."
-              : "Создать визуализацию →"}
-          </button>
-
-          {error && <div className="error">{error}</div>}
-        </div>
-      </section>
-
-      {(loading || result) && (
-        <section className="result">
-          <h2>03 — Результат</h2>
-
-          {loading ? (
-            <div className="loading">
-              <div className="spinner" />
-
-              <h3>Создаём вашу визуализацию</h3>
-
-              <p>AI подбирает новую прическу...</p>
-            </div>
           ) : (
             <>
-              <img
-                className="result-image"
-                src={result}
-                alt="Новая прическа"
+              <OptionGroup
+                title="Форма"
+                options={maleForms}
+                value={maleForm}
+                onChange={setMaleForm}
               />
 
-              <div className="result-actions">
-                <button onClick={() => setResult("")}>
-                  ← Попробовать другой вариант
-                </button>
+              {(maleForm === "undercut" ||
+                maleForm === "elongated") && (
+                <OptionGroup
+                  title="Длина"
+                  options={lengths}
+                  value={length}
+                  onChange={setLength}
+                />
+              )}
 
-                <a
-                  href={result}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Скачать результат
-                </a>
-              </div>
+              <OptionGroup
+                title="Виски"
+                options={temples}
+                value={maleTemples}
+                onChange={setMaleTemples}
+              />
             </>
           )}
         </section>
-      )}
 
-      <footer>
-        ПРОФКОСМО AI · Демонстрационная версия
-      </footer>
-    </main>
-  );
-}
+        <section className="card">
+          <h2>3. Цвет</h2>
 
-function Group({
-  title,
-  options,
-  value,
-  setValue,
-}: {
-  title: string;
-  options: string[][];
-  value: string;
-  setValue: (value: string) => void;
-}) {
-  return (
-    <div className="group">
-      <label>{title}</label>
+          <OptionGroup
+            title="Уровень тона"
+            options={toneLevels}
+            value={colorDepth}
+            onChange={(value) => {
+              setColorDepth(value);
+              setColorShade("");
+            }}
+          />
 
-      <div className="options">
-        {options.map(([key, label]) => (
+          {colorDepth && (
+            <OptionGroup
+              title={`Оттенок — ${colorDepth} тон`}
+              options={availableShades}
+              value={colorShade}
+              onChange={setColorShade}
+            />
+          )}
+
+          <OptionGroup
+            title="Техника окрашивания"
+            options={coloringTechniques}
+            value={coloring}
+            onChange={setColoring}
+          />
+        </section>
+
+        <section className="card">
           <button
-            key={key}
-            className={value === key ? "active" : ""}
-            onClick={() => setValue(key)}
+            className="generate"
             type="button"
+            disabled={loading}
+            onClick={generate}
           >
-            {label}
+            {loading
+              ? "Создаём варианты..."
+              : "Подобрать прическу"}
           </button>
-        ))}
+
+          {error && <p className="error">{error}</p>}
+        </section>
+
+        {resultImages.length > 0 && (
+          <section className="card results">
+            <h2>Варианты</h2>
+
+            <p className="results-description">
+              Несколько вариантов на основе выбранных параметров.
+            </p>
+
+            <div className="results-grid">
+              {resultImages.map((src, index) => (
+                <div className="result" key={`${src}-${index}`}>
+                  <div className="result-number">
+                    Вариант {index + 1}
+                  </div>
+
+                  <img
+                    src={src}
+                    alt={`Вариант прически ${index + 1}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
-    </div>
+    </main>
   );
 }
