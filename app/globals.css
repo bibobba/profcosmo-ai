@@ -326,3 +326,25 @@ footer {
     padding: 20px;
   }
 }
+.card,
+.option-group,
+.options {
+  position: relative;
+  z-index: 2;
+}
+
+.option {
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.upload {
+  position: relative;
+  z-index: 1;
+}
+
+.option-group button {
+  pointer-events: auto;
+}
