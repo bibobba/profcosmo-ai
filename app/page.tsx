@@ -318,7 +318,7 @@ export default function Home() {
        * структура сохраняется,
        * варианты отличаются прежде всего длиной/формой.
        */
-      formData.append("variants", "3");
+      formData.append("variants", "1");
 
       const response = await fetch("/api/generate", {
         method: "POST",
