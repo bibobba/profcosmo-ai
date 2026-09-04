@@ -8,6 +8,7 @@ const replicate = new Replicate({
 });
 
 const allowed = {
+  gender: ["male", "female"],
   length: ["short", "medium", "long"],
   structure: ["straight", "wavy", "curly"],
   style: ["classic", "modern", "trendy"],
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
 
     const image = formData.get("image");
+    const gender = formData.get("gender");
     const length = formData.get("length");
     const structure = formData.get("structure");
     const style = formData.get("style");
@@ -51,9 +53,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (
+      typeof gender !== "string" ||
       typeof length !== "string" ||
       typeof structure !== "string" ||
       typeof style !== "string" ||
+      !allowed.gender.includes(gender) ||
       !allowed.length.includes(length) ||
       !allowed.structure.includes(structure) ||
       !allowed.style.includes(style)
@@ -68,112 +72,141 @@ export async function POST(request: NextRequest) {
     const base64 = imageBuffer.toString("base64");
     const inputImage = `data:${image.type};base64,${base64}`;
 
+    const genderText: Record<string, string> = {
+      male: "MALE PERSON / MAN",
+      female: "FEMALE PERSON / WOMAN",
+    };
+
     const lengthText: Record<string, string> = {
-      short: "short professional haircut",
-      medium: "medium-length professional hairstyle",
-      long: "long professional hairstyle",
+      short: "short",
+      medium: "medium-length",
+      long: "long",
     };
 
     const structureText: Record<string, string> = {
-      straight: "straight hair",
-      wavy: "wavy hair",
-      curly: "curly hair",
+      straight: "straight",
+      wavy: "wavy",
+      curly: "curly",
     };
 
     const styleText: Record<string, string> = {
-      classic: "classic professional style",
-      modern: "modern contemporary style",
-      trendy: "fashion-forward trendy style",
+      classic: "classic professional",
+      modern: "modern contemporary",
+      trendy: "fashion-forward trendy",
     };
 
     const prompt = `
 EDIT THE PROVIDED PHOTO.
-DO NOT GENERATE A NEW PERSON.
+DO NOT CREATE A NEW PERSON.
 
-THIS IS A HAIR-ONLY EDIT.
+THIS IS A PROFESSIONAL HAIRSTYLE VISUALIZATION.
 
-The person in the input image MUST remain the exact same person.
+The selected client gender is:
+${genderText[gender]}
 
-PRESERVE THE ORIGINAL PERSON EXACTLY:
-- same biological sex
-- same gender presentation
-- same face
-- same facial identity
-- same facial proportions
-- same eyes
-- same eyebrows
-- same nose
-- same lips
-- same jaw
-- same ears
-- same skin tone
-- same age
-- same body
-- same neck
-- same shoulders
-- same clothing
-- same pose
-- same head position
-- same camera angle
-- same framing
-- same lighting
-- same background
-- same photograph composition
+THIS GENDER MUST NOT CHANGE.
 
-DO NOT TURN THE PERSON INTO A DIFFERENT PERSON.
+If the input is a man, the output MUST remain a MAN.
+If the input is a woman, the output MUST remain a WOMAN.
 
-DO NOT CHANGE THE PERSON'S SEX OR GENDER.
+DO NOT CHANGE THE PERSON'S SEX.
+DO NOT CHANGE THE PERSON'S GENDER PRESENTATION.
+DO NOT FEMINIZE A MAN.
+DO NOT MASCULINIZE A WOMAN.
 
-DO NOT FEMINIZE A MALE PERSON.
-DO NOT MASCULINIZE A FEMALE PERSON.
+IDENTITY PRESERVATION IS THE HIGHEST PRIORITY.
 
-DO NOT BEAUTIFY THE FACE.
-DO NOT MODIFY THE FACE.
+Keep the EXACT SAME PERSON from the input photograph.
+
+PRESERVE:
+- same identity;
+- same face;
+- same facial structure;
+- same eyes;
+- same eyebrows;
+- same nose;
+- same mouth;
+- same lips;
+- same jaw;
+- same ears;
+- same skin;
+- same skin tone;
+- same age;
+- same body;
+- same neck;
+- same shoulders;
+- same clothing;
+- same pose;
+- same head position;
+- same camera angle;
+- same framing;
+- same lighting;
+- same background.
+
 DO NOT REGENERATE THE FACE.
-DO NOT CHANGE FACIAL FEATURES.
 
-The original face must remain visually identical to the input photograph.
+DO NOT BEAUTIFY THE PERSON.
 
-ONLY CHANGE THE HAIR.
+DO NOT ALTER THE FACE.
 
-Requested hairstyle:
+DO NOT CHANGE FACIAL PROPORTIONS.
 
-Length: ${lengthText[length]}
-Hair texture: ${structureText[structure]}
-Style: ${styleText[style]}
+DO NOT CHANGE THE PERSON'S AGE.
 
-The new hairstyle must:
-- grow naturally from the existing hairline;
+DO NOT CHANGE THE PERSON'S BODY.
+
+DO NOT CHANGE THE CLOTHING.
+
+DO NOT CHANGE THE BACKGROUND.
+
+ONLY EDIT THE HAIR.
+
+REQUESTED HAIRSTYLE:
+
+Gender:
+${genderText[gender]}
+
+Hair length:
+${lengthText[length]}
+
+Hair structure:
+${structureText[structure]}
+
+Hair style:
+${styleText[style]}
+
+The new hairstyle must be appropriate for the selected gender.
+
+The new hair must:
 - follow the existing head shape;
-- match the person's existing hair color unless necessary;
+- follow the existing hairline;
+- connect naturally to the existing hair;
 - have realistic density;
-- have realistic individual strands;
-- have realistic shadows;
 - have realistic volume;
-- look physically plausible;
-- look like professionally cut and styled real hair.
+- have realistic strands;
+- have realistic shadows;
+- look like real human hair;
+- look professionally cut and styled.
 
-The final result must look like:
-THE SAME ORIGINAL PHOTOGRAPH
-OF THE SAME PERSON
-AFTER A PROFESSIONAL HAIRCUT.
+The result must look like the SAME PERSON
+in the SAME PHOTOGRAPH
+after receiving a professional haircut.
 
-The hairstyle is the ONLY intentional change.
+THE ONLY INTENTIONAL CHANGE IS THE HAIRSTYLE.
 
-NO changes to the face.
-NO changes to the body.
-NO changes to clothing.
-NO changes to pose.
-NO changes to background.
-NO changes to lighting.
-NO changes to identity.
-NO changes to sex or gender.
+CRITICAL:
+DO NOT TURN A MAN INTO A WOMAN.
+DO NOT TURN A WOMAN INTO A MAN.
+DO NOT CHANGE SEX.
+DO NOT CHANGE GENDER.
+DO NOT CHANGE IDENTITY.
+DO NOT CHANGE FACE.
 
 HAIR ONLY.
 `;
 
     const output = await replicate.run(
-      "black-forest-labs/flux-kontext-max",
+      "black-forest-labs/flux-kontext-pro",
       {
         input: {
           prompt,
