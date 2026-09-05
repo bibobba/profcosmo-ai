@@ -5,7 +5,7 @@ import {
   presignUrl,
 } from "@vercel/blob";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const OPENAI_API_URL =
   "https://api.openai.com/v1/images/edits";
