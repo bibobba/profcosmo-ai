@@ -1,4 +1,12 @@
-const VALID_GENDERS = ["female", "male"];
+import { NextResponse } from "next/server";
+
+const OPENAI_API_URL =
+  "https://api.openai.com/v1/images/edits";
+
+const VALID_GENDERS = [
+  "female",
+  "male",
+];
 
 const VALID_LENGTHS = [
   "very-short",
@@ -17,6 +25,7 @@ const VALID_STRUCTURES = [
 
 const VALID_FEMALE_FORMS = [
   "ai",
+  "straight-cut",
   "blunt",
   "graduated",
   "layers",
@@ -24,7 +33,17 @@ const VALID_FEMALE_FORMS = [
   "asymmetrical",
 ];
 
-const VALID_FEMALE_BANGS = [
+const VALID_MALE_FORMS = [
+  "classic",
+  "crop",
+  "fade",
+  "taper",
+  "undercut",
+  "textured",
+  "elongated",
+];
+
+const VALID_BANGS = [
   "none",
   "straight",
   "side",
@@ -62,16 +81,6 @@ const VALID_ENDS = [
   "soft",
 ];
 
-const VALID_MALE_FORMS = [
-  "classic",
-  "crop",
-  "fade",
-  "taper",
-  "undercut",
-  "textured",
-  "elongated",
-];
-
 const VALID_TEMPLES = [
   "slanted",
   "straight",
@@ -91,714 +100,933 @@ const VALID_COLORING = [
   "blond",
 ];
 
-function lengthText(value: string) {
-  const map: Record<string, string> = {
-    "very-short":
-      "очень короткая длина: волосы значительно выше плеч, короткий силуэт",
-    short:
-      "короткая длина: волосы примерно от уровня ушей до подбородка",
-    medium:
-      "средняя длина: волосы примерно от подбородка до уровня плеч",
-    "below-shoulders":
-      "длина ниже плеч: волосы заметно ниже линии плеч",
-    long:
-      "длинные волосы: волосы значительно ниже плеч",
-  };
+const VALID_TONES = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+];
 
-  return map[value] || value;
+const VALID_SHADES = [
+  "natural",
+  "ash",
+  "beige",
+  "gold",
+  "copper",
+  "red",
+  "pearl",
+];
+
+function isValid(
+  value: string,
+  values: string[]
+) {
+  return values.includes(value);
 }
 
-function structureText(value: string) {
-  const map: Record<string, string> = {
-    straight:
-      "прямые волосы без выраженной естественной волны",
-    wavy:
-      "волнистые волосы с мягкой естественной волной",
-    curly:
-      "кудрявые волосы с выраженными завитками",
-    "afro-curls":
-      "очень плотные мелкие афро-кудри с выраженной спиральной структурой",
-  };
+function normalizeFemaleForm(
+  value: string
+) {
+  if (value === "blunt") {
+    return "straight-cut";
+  }
 
-  return map[value] || value;
+  return value;
 }
 
-function femaleFormText(value: string) {
-  const map: Record<string, string> = {
-    ai: `
-AI-ПОДБОР ФОРМЫ.
+function getLengthDescription(
+  length: string,
+  gender: string
+) {
+  if (gender === "male") {
+    switch (length) {
+      case "very-short":
+        return "very short, approximately 1–2 cm";
 
-Самостоятельно выбери конкретную профессиональную форму стрижки для этого человека.
+      case "short":
+        return "short, approximately 2–5 cm";
 
-Учитывай:
-- форму лица;
-- форму головы;
-- пропорции;
-- густоту волос;
-- естественную структуру волос;
-- выбранную длину;
-- выбранный пробор;
-- объём;
-- укладку;
-- концы.
+      case "medium":
+        return "medium, approximately 5–10 cm";
 
-Форма должна выглядеть как осознанное решение профессионального парикмахера.
+      case "below-shoulders":
+        return "long hair extending below the shoulders";
 
-НЕ выбирай форму случайно.
-НЕ меняй выбранную длину.
-НЕ нарушай остальные параметры.
+      case "long":
+        return "long, approximately shoulder-length or slightly below; NOT waist-length and NOT chest-length";
 
-Конкретное название стрижки пользователю не задано — поэтому ты самостоятельно определяешь геометрию формы.
-`,
+      default:
+        return "short";
+    }
+  }
 
-    blunt: `
-ПРЯМОЙ СРЕЗ.
+  switch (length) {
+    case "very-short":
+      return "very short";
 
-Создай цельную, чёткую геометрическую форму с выраженной линией нижнего среза.
+    case "short":
+      return "short";
 
-Нижняя линия волос должна быть визуально ровной и плотной.
-Не добавляй выраженные слои.
-Не создавай каскад.
-Не делай заметную разницу между уровнями длины.
+    case "medium":
+      return "medium";
 
-Главный визуальный признак — единая плотная линия среза.
-`,
+    case "below-shoulders":
+      return "below the shoulders";
 
-    graduated: `
-ГРАДУИРОВАННАЯ ФОРМА.
+    case "long":
+      return "long";
 
-Создай форму, в которой длина волос постепенно изменяется между зонами.
-
-Должен быть заметен профессиональный переход длины.
-Форма должна иметь внутреннюю градуировку и изменение веса волос.
-
-Не делай простой ровный blunt-срез.
-Не превращай форму в полностью одноуровневое каре.
-Градуировка должна быть видна по силуэту и распределению массы волос.
-`,
-
-    layers: `
-СЛОИСТАЯ ФОРМА.
-
-Создай стрижку с несколькими различимыми уровнями длины.
-
-Верхние и внутренние слои должны быть короче нижних.
-Должна быть заметная разница между уровнями волос.
-Слои должны создавать движение и изменение силуэта.
-
-Волосы НЕ должны выглядеть как единая цельная масса одной длины.
-
-КРИТИЧЕСКИ ВАЖНО:
-- не делать обычный blunt bob;
-- не делать одноуровневое каре;
-- не делать ровный цельный срез;
-- не скрывать слои полностью;
-- сохранить несколько визуально различимых уровней длины.
-
-При этом общая длина должна соответствовать выбранной пользователем длине.
-`,
-
-    cascade: `
-КАСКАДНАЯ ФОРМА.
-
-Создай выраженную каскадную структуру волос с последовательными переходами длины.
-
-Передние и верхние зоны должны иметь более короткие уровни.
-Нижние зоны должны оставаться длиннее.
-Переходы между уровнями должны формировать выраженный каскадный силуэт.
-
-КРИТИЧЕСКИ ВАЖНО:
-- не делать одноуровневую стрижку;
-- не делать простой blunt bob;
-- не делать обычное каре;
-- создать заметную многоуровневую структуру;
-- сохранить выбранную общую длину.
-`,
-
-    asymmetrical: `
-АССИМЕТРИЧНАЯ ФОРМА.
-
-Создай намеренно асимметричную геометрию стрижки.
-
-Левая и правая стороны должны визуально отличаться по длине или форме.
-Асимметрия должна быть осознанной и профессиональной, а не случайной ошибкой.
-
-Не делай симметричное каре.
-Не делай одинаковую длину с обеих сторон.
-
-Общая длина всё равно должна соответствовать выбранному параметру длины.
-`,
-  };
-
-  return map[value] || value;
+    default:
+      return "medium";
+  }
 }
 
-function femaleBangsText(value: string) {
-  const map: Record<string, string> = {
-    none: "без чёлки: волосы не должны образовывать отдельную чёлку на лбу",
-    straight: "прямая чёлка",
-    side: "боковая чёлка",
-    long: "длинная чёлка",
-    curtain: "чёлка-шторка",
-    short: "короткая чёлка",
-  };
+function getStructureDescription(
+  structure: string
+) {
+  switch (structure) {
+    case "straight":
+      return "straight hair";
 
-  return map[value] || value;
+    case "wavy":
+      return "wavy hair with visible natural waves";
+
+    case "curly":
+      return "curly hair with defined curls";
+
+    case "afro-curls":
+      return "tight afro-textured curls";
+
+    default:
+      return "natural hair texture";
+  }
 }
 
-function partingText(value: string) {
-  const map: Record<string, string> = {
-    center: "центральный пробор",
-    left: "пробор слева",
-    right: "пробор справа",
-    none: "без выраженного пробора",
-  };
+function getMaleFormDescription(
+  form: string,
+  length: string,
+  temples: string
+) {
+  const lengthDescription =
+    getLengthDescription(
+      length,
+      "male"
+    );
 
-  return map[value] || value;
+  let formDescription = "";
+
+  switch (form) {
+    case "classic":
+      formDescription = `
+MALE CLASSIC HAIRCUT:
+- Professional traditional men's haircut.
+- Clean, balanced silhouette.
+- Shorter sides and back.
+- Moderate length on top.
+- Natural masculine proportions.
+- No dramatic long hair.
+- No disconnected undercut.
+- No feminine styling.
+`;
+      break;
+
+    case "crop":
+      formDescription = `
+MALE CROP:
+- Clearly recognizable men's crop haircut.
+- Short sides and back.
+- Compact top.
+- Short textured top.
+- Forward-oriented fringe/top.
+- Strong compact silhouette.
+- Do not create long hair.
+- Do not create a pompadour.
+- Do not create an undercut.
+`;
+      break;
+
+    case "fade":
+      formDescription = `
+MALE FADE:
+- Clearly recognizable professional fade haircut.
+- Sides and back progressively transition from very short near the lower area to longer hair toward the top.
+- The transition must be visibly gradual and blended.
+- Top remains clearly longer than the faded sides.
+- Clean professional barber geometry.
+- Do not make the entire haircut uniformly short.
+- Do not create an undercut.
+`;
+      break;
+
+    case "taper":
+      formDescription = `
+MALE TAPER:
+- Professional taper haircut.
+- Gradual reduction of length around temples and neckline.
+- The transition is concentrated around the edges.
+- More hair remains on the sides than in a skin fade.
+- Top remains clearly longer.
+- Natural masculine silhouette.
+- Do not turn it into a full skin fade.
+- Do not create an undercut.
+`;
+      break;
+
+    case "undercut":
+      formDescription = `
+MALE UNDERCUT:
+- Clearly recognizable men's undercut.
+- The sides and back are significantly shorter than the top.
+- Strong visible disconnection between the short sides/back and longer top.
+- The top must remain substantially longer than the sides.
+- The long section is concentrated on the top and upper back, following a masculine undercut structure.
+- Do NOT turn the hairstyle into generic long hair.
+- Do NOT create hair hanging to the chest or waist.
+- Do NOT make it look feminine.
+- Even when the selected length is "long", keep the result recognizably masculine and undercut-shaped.
+- Preserve a strong disconnected undercut silhouette.
+`;
+      break;
+
+    case "textured":
+      formDescription = `
+MALE TEXTURED HAIRCUT:
+- Professional men's textured haircut.
+- Visible texture and separation between strands.
+- Natural irregularity on the top.
+- Short-to-medium masculine sides.
+- Controlled texture, not messy random hair.
+- No long feminine silhouette.
+- No undercut unless explicitly requested.
+`;
+      break;
+
+    case "elongated":
+      formDescription = `
+MALE ELONGATED HAIRCUT:
+- Clearly recognizable elongated men's haircut.
+- Longer top and back while maintaining a masculine men's haircut structure.
+- The hair should look intentionally grown out and elongated.
+- Preserve masculine proportions around the face and temples.
+- The selected length must visibly affect the overall silhouette.
+- "Long" means approximately shoulder-length or slightly below at maximum.
+- NEVER create waist-length hair.
+- NEVER create hair extending dramatically onto the chest.
+- NEVER turn the result into a feminine long hairstyle.
+`;
+      break;
+
+    default:
+      formDescription = `
+Professional men's haircut with a natural masculine silhouette.
+`;
+  }
+
+  let templesDescription = "";
+
+  switch (temples) {
+    case "slanted":
+      templesDescription = `
+TEMPLES:
+- Slanted men's temple shape.
+- The temple line should visibly angle naturally.
+`;
+      break;
+
+    case "straight":
+      templesDescription = `
+TEMPLES:
+- Straight men's temple shape.
+- Clean vertical/straight temple line.
+`;
+      break;
+
+    case "skin-fade":
+      templesDescription = `
+TEMPLES:
+- Skin fade at the temples.
+- Very short to skin-level transition around the temple area.
+- Clean professional barber finish.
+- Clearly visible fade around the temples.
+`;
+      break;
+
+    default:
+      templesDescription = "";
+  }
+
+  return `
+${formDescription}
+
+SELECTED LENGTH:
+${lengthDescription}
+
+${templesDescription}
+`;
 }
 
-function volumeText(value: string) {
-  const map: Record<string, string> = {
-    low: "низкий объём",
-    natural: "естественный объём",
-    medium: "средний объём",
-    high: "высокий объём",
-  };
+function getFemaleFormDescription(
+  form: string
+) {
+  switch (form) {
+    case "ai":
+      return `
+FEMALE AI-PICK:
+- Choose the most professionally suitable haircut shape based on the person's face, head shape, natural hair structure, selected length and all other parameters.
+- The result must still respect every explicit parameter.
+- Do not randomly choose an extreme hairstyle.
+`;
 
-  return map[value] || value;
+    case "straight-cut":
+      return `
+FEMALE STRAIGHT CUT:
+- Clean, clearly defined one-length perimeter.
+- Strong straight cutting line.
+- Dense, controlled lower edge.
+- No visible cascade.
+- No obvious layers.
+- Do not turn this into a graduated bob.
+`;
+
+    case "graduated":
+      return `
+FEMALE GRADUATED HAIRCUT:
+- Visible progressive change in length and weight.
+- Professional graduated geometry.
+- Clear difference between shorter and longer sections.
+- Controlled shape around the head.
+`;
+
+    case "layers":
+      return `
+FEMALE LAYERED HAIRCUT:
+- Multiple clearly distinguishable length levels.
+- Upper/internal sections must be shorter than the lower sections.
+- Visible layering throughout the shape.
+- Do NOT make the result look like a one-length bob.
+- Do NOT make it look like a simple blunt cut.
+`;
+
+    case "cascade":
+      return `
+FEMALE CASCADE:
+- Clearly pronounced cascading structure.
+- Shorter upper and front sections progressively transition into longer lower sections.
+- Multiple visible length levels.
+- Strong layered cascade silhouette.
+- Do NOT create a one-length haircut.
+`;
+
+    case "asymmetrical":
+      return `
+FEMALE ASYMMETRICAL HAIRCUT:
+- Left and right sides must visibly differ in length or shape.
+- Professional intentional asymmetry.
+- The asymmetry must be obvious enough to recognize.
+`;
+
+    default:
+      return "";
+  }
 }
 
-function stylingText(value: string) {
-  const map: Record<string, string> = {
-    natural: "естественная укладка",
-    smooth: "гладкая укладка",
-    textured: "текстурная укладка",
-    voluminous: "объёмная укладка",
-    messy: "небрежная укладка",
-    wet: "влажный эффект",
+function getColorDescription(
+  coloring: string,
+  tone: string,
+  shade: string
+) {
+  if (coloring === "none") {
+    return `
+COLOR:
+- No coloring.
+- Preserve the person's existing natural hair color as closely as possible.
+- Do not intentionally lighten or darken the hair.
+- Do not introduce copper, red, blonde or other artificial tones.
+`;
+  }
+
+  const toneDescription: Record<
+    string,
+    string
+  > = {
+    "1": "deepest black",
+    "2": "very dark brown",
+    "3": "dark brown",
+    "4": "medium dark brown",
+    "5": "medium brown",
+    "6": "light brown / dark blonde",
+    "7": "medium blonde",
+    "8": "light blonde",
+    "9": "very light blonde",
+    "10": "extremely light blonde",
   };
 
-  return map[value] || value;
-}
-
-function endsText(value: string) {
-  const map: Record<string, string> = {
-    straight: "прямые, чёткие концы",
-    textured: "текстурированные концы",
-    soft: "мягкие естественные концы",
+  const shadeDescription: Record<
+    string,
+    string
+  > = {
+    natural:
+      "natural neutral tone",
+    ash:
+      "cool ash tone without strong warmth",
+    beige:
+      "neutral beige tone",
+    gold:
+      "warm golden tone",
+    copper:
+      "clearly visible copper tone",
+    red:
+      "clearly visible red tone",
+    pearl:
+      "cool pearlescent tone",
   };
 
-  return map[value] || value;
-}
+  let techniqueDescription = "";
 
-function maleFormText(value: string) {
-  const map: Record<string, string> = {
-    classic: "классическая мужская форма",
-    crop: "Crop",
-    fade: "Fade",
-    taper: "Taper",
-    undercut: "Undercut",
-    textured: "текстурированная мужская форма",
-    elongated: "удлинённая мужская форма",
-  };
+  switch (coloring) {
+    case "solid":
+      techniqueDescription =
+        "uniform solid color throughout the hair";
 
-  return map[value] || value;
-}
+      break;
 
-function templesText(value: string) {
-  const map: Record<string, string> = {
-    slanted: "косые виски",
-    straight: "прямые виски",
-    "skin-fade": "виски с Skin Fade",
-  };
+    case "highlighting":
+      techniqueDescription =
+        "professional highlighting with lighter selected strands";
 
-  return map[value] || value;
-}
+      break;
 
-function coloringText(value: string) {
-  const map: Record<string, string> = {
-    none:
-      "без окрашивания, сохранить естественный цвет волос",
-    solid:
-      "однотонное окрашивание по всей массе волос",
-    highlighting:
-      "мелирование с отдельными светлыми прядями",
-    balayage:
-      "Balayage с мягким распределением светлых участков",
-    shatush:
-      "Shatush с мягким переходом светлых участков",
-    airtouch:
-      "AirTouch с естественным осветлением отдельных прядей",
-    ombre:
-      "Ombre с переходом цвета по длине",
-    toning:
-      "тонирование с равномерным изменением оттенка",
-    "gray-camouflage":
-      "камуфляж седины с естественным смешением седых и окрашенных волос",
-    blond:
-      "блондирование с осветлением волос до светлого блонд-уровня",
-  };
+    case "balayage":
+      techniqueDescription =
+        "professional balayage with hand-painted dimensional lightening";
 
-  return map[value] || value;
-}
+      break;
 
-function shadeText(value: string) {
-  const map: Record<string, string> = {
-    natural: "натуральный оттенок",
-    ash: "пепельный оттенок",
-    beige: "бежевый оттенок",
-    gold: "золотистый оттенок",
-    copper: "медный оттенок",
-    red: "красный оттенок",
-    pearl: "перламутровый оттенок",
-  };
+    case "shatush":
+      techniqueDescription =
+        "professional shatush with soft natural-looking lightening";
 
-  return map[value] || value;
+      break;
+
+    case "airtouch":
+      techniqueDescription =
+        "professional AirTouch-style dimensional lightening";
+
+      break;
+
+    case "ombre":
+      techniqueDescription =
+        "professional ombre with a controlled transition from darker roots to lighter lengths";
+
+      break;
+
+    case "toning":
+      techniqueDescription =
+        "professional toning applied consistently to the existing hair";
+
+      break;
+
+    case "gray-camouflage":
+      techniqueDescription =
+        "professional gray camouflage with natural-looking coverage";
+
+      break;
+
+    case "blond":
+      techniqueDescription =
+        "professional blonde result at the selected tone level";
+
+      break;
+
+    default:
+      techniqueDescription =
+        "professional hair coloring";
+  }
+
+  return `
+COLOR:
+- Coloring technique: ${techniqueDescription}.
+- Tone level: ${tone} — ${toneDescription[tone] || "selected tone"}.
+- Shade: ${shadeDescription[shade] || "selected shade"}.
+- The selected tone and shade must be visibly reflected in the hair.
+- Keep the color realistic and professionally achievable.
+- Do not change skin tone.
+- Do not change eyebrows unless absolutely necessary for a realistic result.
+`;
 }
 
 function buildPrompt(params: {
   gender: string;
   length: string;
   structure: string;
-
   femaleForm: string;
+  maleForm: string;
   bangs: string;
   parting: string;
   volume: string;
   styling: string;
   ends: string;
-
-  maleForm: string;
   temples: string;
-
+  coloring: string;
   colorDepth: string;
   colorShade: string;
-  coloring: string;
 }) {
   const {
     gender,
     length,
     structure,
-
     femaleForm,
+    maleForm,
     bangs,
     parting,
     volume,
     styling,
     ends,
-
-    maleForm,
     temples,
-
+    coloring,
     colorDepth,
     colorShade,
-    coloring,
   } = params;
 
-  const commonRules = `
-EDIT THE PROVIDED PHOTOGRAPH.
+  const common = `
+TASK:
+Edit the provided person's photograph and change ONLY the hairstyle and hair color according to the selected professional parameters.
 
-This is a professional hairstyle visualization.
+IDENTITY PRESERVATION:
+- Keep exactly the same person.
+- Preserve facial identity.
+- Preserve face shape.
+- Preserve eyes, nose, mouth, jawline and skin appearance.
+- Preserve body, pose, clothing, hands and accessories.
+- Preserve camera angle.
+- Preserve lighting.
+- Preserve background.
+- Do not beautify or redesign the person.
+- Do not change facial proportions.
 
-The provided photograph is the source of truth.
+HAIR EDITING:
+- Change the hair realistically as if the person actually received this haircut and/or color.
+- Hair must grow naturally from the scalp.
+- Preserve realistic hairline and natural density.
+- Maintain realistic individual strands and texture.
+- The haircut must have professional barber/stylist geometry.
+- Do not add hair to the face.
+- Do not modify the ears, forehead or facial features except where naturally covered by the new hairstyle.
 
-DO NOT CREATE A NEW PERSON.
+VERY IMPORTANT:
+The selected haircut form is a hard constraint.
+The selected length is a hard constraint when provided.
+The selected hair structure is a hard constraint.
+The selected color parameters are hard constraints.
 
-IDENTITY PRESERVATION IS EXTREMELY IMPORTANT.
-
-Keep:
-- exactly the same person;
-- the same face;
-- the same facial proportions;
-- the same eyes;
-- the same eyebrows;
-- the same nose;
-- the same lips;
-- the same jaw;
-- the same ears;
-- the same apparent age;
-- the same skin;
-- the same head position;
-- the same camera angle;
-- the same body;
-- the same clothing;
-- the same background;
-- the same lighting;
-- the same composition.
-
-Do not beautify the face.
-Do not modify facial features.
-Do not modify the body.
-Do not modify the clothing.
-Do not modify the background.
-
-ONLY MODIFY THE HAIR.
-
-The result must look like a realistic photograph of the SAME PERSON after visiting a professional hair salon.
-
-The hair must remain naturally attached to the scalp.
-The hairline must remain realistic.
-Hair density must remain realistic.
-Individual strands must look natural.
-The result must be photorealistic.
-
-HAIR PARAMETERS ARE HARD CONSTRAINTS.
-
-All selected parameters must be respected simultaneously.
-
-Do not ignore a selected parameter.
-Do not replace one selected parameter with another.
-Do not prioritize creativity over the selected professional parameters.
+Do not substitute a visually similar but different haircut.
+Do not mix several haircut types.
+Do not invent an unrelated hairstyle.
 `;
 
-  let hairInstructions = `
+  const structureDescription =
+    getStructureDescription(
+      structure
+    );
+
+  const colorDescription =
+    getColorDescription(
+      coloring,
+      colorDepth,
+      colorShade
+    );
+
+  if (gender === "male") {
+    return `
+${common}
+
 GENDER:
-${gender === "female" ? "female" : "male"}
+- Male.
 
-LENGTH:
-${lengthText(length)}
+HAIR STRUCTURE:
+- ${structureDescription}.
 
-STRUCTURE:
-${structureText(structure)}
-`;
+${getMaleFormDescription(
+  maleForm,
+  length,
+  temples
+)}
 
-  if (gender === "female") {
-    hairInstructions += `
-FEMALE HAIR DESIGN
+MALE HAIRSTYLE RULES:
+- The result must remain clearly masculine.
+- Do not create feminine long-hair styling.
+- Do not add bangs as a separate women's hairstyle.
+- Do not introduce a side part unless it naturally belongs to the selected male form.
+- Do not invent volume or styling requirements that were not selected.
 
-FORM OF HAIRCUT:
-${femaleFormText(femaleForm)}
+${colorDescription}
 
-BANGS:
-${femaleBangsText(bangs)}
-
-PARTING:
-${partingText(parting)}
-
-VOLUME:
-${volumeText(volume)}
-
-STYLING:
-${stylingText(styling)}
-
-ENDS:
-${endsText(ends)}
-
-FEMALE PARAMETER PRIORITIES:
-
-1. Overall length must visibly match the selected length.
-2. The selected haircut form must be visibly expressed.
-3. Hair structure must match the selected structure.
-4. Bangs must match exactly.
-5. Parting must match exactly.
-6. Volume must match.
-7. Styling must match.
-8. Ends must match.
-
-Do not let the selected styling hide the haircut geometry.
-
-Do not let the selected volume change the actual haircut length.
-
-Do not let the selected hair structure change the selected haircut form.
-
-If "without bangs" is selected, absolutely do not create bangs.
-
-If "without pronounced parting" is selected, do not create a strong visible parting.
-`;
-  } else {
-    hairInstructions += `
-MALE HAIR DESIGN
-
-FORM:
-${maleFormText(maleForm)}
-
-TEMPLES:
-${templesText(temples)}
-
-The selected male form is mandatory.
-
-The selected temple design is mandatory.
-
-The selected length is mandatory.
-
-Do not add bangs.
-Do not add a side part.
-Do not add a nape design.
-Do not invent additional haircut parameters.
+FINAL CHECK:
+Before producing the image, verify:
+1. Same person.
+2. Male haircut.
+3. Correct selected form: ${maleForm}.
+4. Correct selected structure: ${structure}.
+5. Correct selected temple design: ${temples}.
+6. Correct selected length where applicable: ${length}.
+7. Correct selected coloring: ${coloring}.
+8. If coloring is not "none", correct tone ${colorDepth} and shade ${colorShade}.
+9. No unrelated hairstyle.
+10. No chest-length or waist-length hair unless explicitly requested by the selected parameters.
 `;
   }
 
-  const colorInstructions = `
-COLOR DESIGN
-
-TONE LEVEL:
-${colorDepth} tone
-
-SHADE:
-${shadeText(colorShade)}
-
-COLORING TECHNIQUE:
-${coloringText(coloring)}
-
-COLOR IS A HARD CONSTRAINT.
-
-The final hair color must visibly correspond to the selected tone level and shade.
-
-Do not randomly change the hair color.
-
-Do not change the skin tone.
-
-Do not change the eyebrows or eyelashes simply to make the result more dramatic.
-
-Keep realistic natural variation in individual hair strands.
-
-The coloring technique must be visually consistent with the selected technique.
-
-If "without coloring" is selected, preserve the person's natural hair color as closely as possible.
-`;
-
-  const finalCheck = `
-FINAL QUALITY CONTROL
-
-Before producing the image, internally verify:
-
-IDENTITY:
-- same person;
-- same face;
-- same body;
-- same clothing;
-- same background;
-- same composition.
-
-HAIR:
-- correct length;
-- correct structure;
-- correct haircut form;
-- correct bangs;
-- correct parting;
-- correct volume;
-- correct styling;
-- correct ends.
-
-COLOR:
-- correct tone level;
-- correct shade;
-- correct coloring technique.
-
-MOST IMPORTANT:
-
-The generated hairstyle must visibly communicate the selected haircut form.
-
-For example:
-
-If the form is LAYERS:
-the image must visibly contain multiple levels of hair length.
-It must NOT look like a simple one-length bob.
-
-If the form is CASCADE:
-the image must visibly contain a cascade of different lengths.
-It must NOT look like a simple bob.
-
-If the form is GRADUATED:
-the image must visibly contain a gradual change in length and weight.
-
-If the form is ASYMMETRICAL:
-the left and right sides must visibly differ.
-
-If the form is BLUNT:
-the lower edge must be visibly clean, dense and predominantly one length.
-
-If the form is AI-PODBOR:
-choose the most professionally suitable haircut geometry for this person while respecting every other selected parameter.
-
-Do not make the result generic.
-
-Do not make the result identical to the original hairstyle when the selected parameters require a visible haircut change.
-
-Produce ONE photorealistic final hairstyle visualization.
-`;
-
   return `
-${commonRules}
+${common}
 
-${hairInstructions}
+GENDER:
+- Female.
 
-${colorInstructions}
+HAIR STRUCTURE:
+- ${structureDescription}.
 
-${finalCheck}
+SELECTED LENGTH:
+- ${getLengthDescription(
+    length,
+    "female"
+  )}.
+
+${getFemaleFormDescription(
+    femaleForm
+  )}
+
+BANGS:
+- ${bangs}.
+
+PARTING:
+- ${parting}.
+
+VOLUME:
+- ${volume}.
+
+STYLING:
+- ${styling}.
+
+ENDS:
+- ${ends}.
+
+${colorDescription}
+
+FINAL CHECK:
+Before producing the image, verify:
+1. Same person.
+2. Female haircut.
+3. Correct selected haircut form: ${femaleForm}.
+4. Correct selected length: ${length}.
+5. Correct selected hair structure: ${structure}.
+6. Correct bangs: ${bangs}.
+7. Correct parting: ${parting}.
+8. Correct volume: ${volume}.
+9. Correct styling: ${styling}.
+10. Correct ends: ${ends}.
+11. Correct coloring: ${coloring}.
+12. If coloring is not "none", correct tone ${colorDepth} and shade ${colorShade}.
+13. No unrelated haircut.
 `;
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request
+) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey =
+      process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      return Response.json(
+      return NextResponse.json(
         {
           success: false,
-          error: "OPENAI_API_KEY не настроен.",
+          error:
+            "OPENAI_API_KEY не настроен на сервере.",
         },
         { status: 500 }
       );
     }
 
-    const formData = await request.formData();
+    const formData =
+      await request.formData();
 
-    const image = formData.get("image");
-
-    const gender = String(
-      formData.get("gender") || ""
-    );
-
-    const length = String(
-      formData.get("length") || ""
-    );
-
-    const structure = String(
-      formData.get("structure") || ""
-    );
-
-    const femaleForm = String(
-      formData.get("femaleForm") || ""
-    );
-
-    const bangs = String(
-      formData.get("bangs") || ""
-    );
-
-    const parting = String(
-      formData.get("parting") || ""
-    );
-
-    const volume = String(
-      formData.get("volume") || ""
-    );
-
-    const styling = String(
-      formData.get("styling") || ""
-    );
-
-    const ends = String(
-      formData.get("ends") || ""
-    );
-
-    const maleForm = String(
-      formData.get("maleForm") || ""
-    );
-
-    const temples = String(
-      formData.get("temples") || ""
-    );
-
-    const colorDepth = String(
-      formData.get("colorDepth") || ""
-    );
-
-    const colorShade = String(
-      formData.get("colorShade") || ""
-    );
-
-    const coloring = String(
-      formData.get("coloring") || ""
-    );
+    const image =
+      formData.get("image");
 
     if (!(image instanceof File)) {
-      return Response.json(
+      return NextResponse.json(
         {
           success: false,
-          error: "Фотография не загружена.",
+          error:
+            "Фотография не была загружена.",
         },
         { status: 400 }
       );
     }
 
-    if (!VALID_GENDERS.includes(gender)) {
-      return Response.json(
+    if (
+      !image.type.startsWith(
+        "image/"
+      )
+    ) {
+      return NextResponse.json(
         {
           success: false,
-          error: "Некорректно выбран пол.",
+          error:
+            "Можно загрузить только изображение.",
         },
         { status: 400 }
       );
     }
 
-    if (!VALID_LENGTHS.includes(length)) {
-      return Response.json(
+    const gender =
+      String(
+        formData.get("gender") ||
+          ""
+      );
+
+    const length =
+      String(
+        formData.get("length") ||
+          "short"
+      );
+
+    const structure =
+      String(
+        formData.get("structure") ||
+          ""
+      );
+
+    const rawFemaleForm =
+      String(
+        formData.get(
+          "femaleForm"
+        ) ||
+          formData.get(
+            "haircutForm"
+          ) ||
+          ""
+      );
+
+    const femaleForm =
+      normalizeFemaleForm(
+        rawFemaleForm
+      );
+
+    const maleForm =
+      String(
+        formData.get(
+          "maleForm"
+        ) || ""
+      );
+
+    const bangs =
+      String(
+        formData.get("bangs") ||
+          "none"
+      );
+
+    const parting =
+      String(
+        formData.get(
+          "parting"
+        ) || "none"
+      );
+
+    const volume =
+      String(
+        formData.get("volume") ||
+          "natural"
+      );
+
+    const styling =
+      String(
+        formData.get(
+          "styling"
+        ) || "natural"
+      );
+
+    const ends =
+      String(
+        formData.get("ends") ||
+          "straight"
+      );
+
+    const temples =
+      String(
+        formData.get(
+          "temples"
+        ) || "straight"
+      );
+
+    const coloring =
+      String(
+        formData.get(
+          "coloring"
+        ) || "none"
+      );
+
+    const colorDepth =
+      String(
+        formData.get(
+          "colorDepth"
+        ) || ""
+      );
+
+    const colorShade =
+      String(
+        formData.get(
+          "colorShade"
+        ) || ""
+      );
+
+    if (
+      !isValid(
+        gender,
+        VALID_GENDERS
+      )
+    ) {
+      return NextResponse.json(
         {
           success: false,
-          error: "Некорректно выбрана длина.",
+          error:
+            "Некорректно выбран пол.",
         },
         { status: 400 }
       );
     }
 
-    if (!VALID_STRUCTURES.includes(structure)) {
-      return Response.json(
+    if (
+      !isValid(
+        length,
+        VALID_LENGTHS
+      )
+    ) {
+      return NextResponse.json(
         {
           success: false,
-          error: "Некорректно выбрана структура волос.",
+          error:
+            "Некорректно выбрана длина.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !isValid(
+        structure,
+        VALID_STRUCTURES
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Некорректно выбрана структура волос.",
         },
         { status: 400 }
       );
     }
 
     if (gender === "female") {
-      if (!VALID_FEMALE_FORMS.includes(femaleForm)) {
-        return Response.json(
+      if (
+        !isValid(
+          femaleForm,
+          VALID_FEMALE_FORMS
+        )
+      ) {
+        return NextResponse.json(
           {
             success: false,
-            error: "Некорректно выбрана форма стрижки.",
+            error:
+              "Некорректно выбрана форма женской стрижки.",
           },
           { status: 400 }
         );
       }
 
-      if (!VALID_FEMALE_BANGS.includes(bangs)) {
-        return Response.json(
+      if (
+        !isValid(
+          bangs,
+          VALID_BANGS
+        )
+      ) {
+        return NextResponse.json(
           {
             success: false,
-            error: "Некорректно выбрана чёлка.",
+            error:
+              "Некорректно выбрана чёлка.",
           },
           { status: 400 }
         );
       }
 
-      if (!VALID_PARTINGS.includes(parting)) {
-        return Response.json(
+      if (
+        !isValid(
+          parting,
+          VALID_PARTINGS
+        )
+      ) {
+        return NextResponse.json(
           {
             success: false,
-            error: "Некорректно выбран пробор.",
+            error:
+              "Некорректно выбран пробор.",
           },
           { status: 400 }
         );
       }
 
-      if (!VALID_VOLUMES.includes(volume)) {
-        return Response.json(
+      if (
+        !isValid(
+          volume,
+          VALID_VOLUMES
+        )
+      ) {
+        return NextResponse.json(
           {
             success: false,
-            error: "Некорректно выбран объём.",
+            error:
+              "Некорректно выбран объём.",
           },
           { status: 400 }
         );
       }
 
-      if (!VALID_STYLINGS.includes(styling)) {
-        return Response.json(
+      if (
+        !isValid(
+          styling,
+          VALID_STYLINGS
+        )
+      ) {
+        return NextResponse.json(
           {
             success: false,
-            error: "Некорректно выбрана укладка.",
+            error:
+              "Некорректно выбрана укладка.",
           },
           { status: 400 }
         );
       }
 
-      if (!VALID_ENDS.includes(ends)) {
-        return Response.json(
+      if (
+        !isValid(
+          ends,
+          VALID_ENDS
+        )
+      ) {
+        return NextResponse.json(
           {
             success: false,
-            error: "Некорректно выбраны концы.",
+            error:
+              "Некорректно выбраны концы.",
           },
           { status: 400 }
         );
@@ -806,188 +1034,263 @@ export async function POST(request: Request) {
     }
 
     if (gender === "male") {
-      if (!VALID_MALE_FORMS.includes(maleForm)) {
-        return Response.json(
+      if (
+        !isValid(
+          maleForm,
+          VALID_MALE_FORMS
+        )
+      ) {
+        return NextResponse.json(
           {
             success: false,
-            error: "Некорректно выбрана мужская форма.",
+            error:
+              "Некорректно выбрана мужская форма.",
           },
           { status: 400 }
         );
       }
 
-      if (!VALID_TEMPLES.includes(temples)) {
-        return Response.json(
+      if (
+        !isValid(
+          temples,
+          VALID_TEMPLES
+        )
+      ) {
+        return NextResponse.json(
           {
             success: false,
-            error: "Некорректно выбраны виски.",
+            error:
+              "Некорректно выбраны виски.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (
+        maleForm !==
+          "undercut" &&
+        maleForm !==
+          "elongated"
+      ) {
+        // Для остальных мужских форм
+        // длина не используется.
+      }
+    }
+
+    if (
+      !isValid(
+        coloring,
+        VALID_COLORING
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Некорректно выбрана техника окрашивания.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Если окрашивания нет,
+    // цветовые параметры не требуются.
+    if (coloring !== "none") {
+      if (
+        !isValid(
+          colorDepth,
+          VALID_TONES
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Выберите корректный уровень тона.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (
+        !isValid(
+          colorShade,
+          VALID_SHADES
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Выберите корректный оттенок.",
           },
           { status: 400 }
         );
       }
     }
 
-    if (!colorDepth) {
-      return Response.json(
-        {
-          success: false,
-          error: "Не выбран уровень тона.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!colorShade) {
-      return Response.json(
-        {
-          success: false,
-          error: "Не выбран оттенок.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!VALID_COLORING.includes(coloring)) {
-      return Response.json(
-        {
-          success: false,
-          error: "Некорректно выбрана техника окрашивания.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const prompt = buildPrompt({
-      gender,
-      length,
-      structure,
-
-      femaleForm,
-      bangs,
-      parting,
-      volume,
-      styling,
-      ends,
-
-      maleForm,
-      temples,
-
-      colorDepth,
-      colorShade,
-      coloring,
-    });
-
-    console.log(
-      "Generating hairstyle with parameters:",
-      {
+    const prompt =
+      buildPrompt({
         gender,
         length,
         structure,
         femaleForm,
+        maleForm,
         bangs,
         parting,
         volume,
         styling,
         ends,
-        maleForm,
         temples,
+        coloring,
         colorDepth,
         colorShade,
-        coloring,
-      }
+      });
+
+    /*
+     * Пока генерируем один результат.
+     *
+     * Это намеренно:
+     * текущий endpoint возвращает base64,
+     * поэтому 3 больших изображения могут
+     * превысить лимит ответа Vercel.
+     *
+     * Три варианта вернём после подключения
+     * нормального хранения изображений.
+     */
+
+    const openAIForm =
+      new FormData();
+
+    openAIForm.append(
+      "model",
+      "gpt-image-2"
     );
 
-    const imageBlob = new Blob(
-      [await image.arrayBuffer()],
-      {
-        type: image.type || "image/jpeg",
-      }
-    );
-
-    const body = new FormData();
-
-    body.append("model", "gpt-image-2");
-
-    body.append(
+    openAIForm.append(
       "image",
-      imageBlob,
-      image.name || "photo.jpg"
+      image,
+      image.name
     );
 
-    body.append("prompt", prompt);
-
-    body.append("size", "1024x1536");
-    body.append("quality", "high");
-    body.append("output_format", "jpeg");
-    body.append("output_compression", "80");
-
-    const response = await fetch(
-      "https://api.openai.com/v1/images/edits",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body,
-      }
+    openAIForm.append(
+      "prompt",
+      prompt
     );
 
-    const data = await response.json();
+    openAIForm.append(
+      "size",
+      "1024x1536"
+    );
 
-    if (!response.ok) {
-      console.error(
-        "OpenAI API error:",
-        data
+    openAIForm.append(
+      "quality",
+      "high"
+    );
+
+    openAIForm.append(
+      "output_format",
+      "jpeg"
+    );
+
+    openAIForm.append(
+      "output_compression",
+      "80"
+    );
+
+    const openAIResponse =
+      await fetch(
+        OPENAI_API_URL,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: openAIForm,
+        }
       );
 
-      return Response.json(
+    const responseText =
+      await openAIResponse.text();
+
+    let responseData: any;
+
+    try {
+      responseData =
+        JSON.parse(
+          responseText
+        );
+    } catch {
+      return NextResponse.json(
         {
           success: false,
           error:
-            data?.error?.message ||
-            "OpenAI не смог обработать изображение.",
+            "OpenAI вернул некорректный ответ.",
         },
-        { status: response.status }
+        { status: 502 }
+      );
+    }
+
+    if (
+      !openAIResponse.ok
+    ) {
+      const message =
+        responseData?.error
+          ?.message ||
+        "Ошибка OpenAI Image API.";
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: message,
+        },
+        {
+          status:
+            openAIResponse.status >=
+              400 &&
+            openAIResponse.status <
+              600
+              ? openAIResponse.status
+              : 502,
+        }
       );
     }
 
     const base64Image =
-      data?.data?.[0]?.b64_json;
+      responseData?.data?.[0]
+        ?.b64_json;
 
     if (!base64Image) {
-      console.error(
-        "OpenAI returned no image:",
-        data
-      );
-
-      return Response.json(
+      return NextResponse.json(
         {
           success: false,
-          error: "OpenAI не вернул изображение.",
+          error:
+            "OpenAI не вернул изображение.",
         },
-        { status: 500 }
+        { status: 502 }
       );
     }
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
+      imageUrl: `data:image/jpeg;base64,${base64Image}`,
       imageUrls: [
         `data:image/jpeg;base64,${base64Image}`,
       ],
     });
   } catch (error) {
     console.error(
-      "Generate route error:",
+      "Generation error:",
       error
     );
 
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         error:
           error instanceof Error
             ? error.message
-            : "Произошла ошибка при генерации.",
+            : "Неизвестная ошибка сервера.",
       },
       { status: 500 }
     );
