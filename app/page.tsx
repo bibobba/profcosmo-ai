@@ -237,9 +237,7 @@ function OptionGroup({
             key={option.value}
             type="button"
             className={`option ${
-              value === option.value
-                ? "option-active"
-                : ""
+              value === option.value ? "option-active" : ""
             }`}
             onClick={() => onChange(option.value)}
           >
@@ -369,32 +367,23 @@ function ColorSettingsBlock({
 }
 
 export default function Home() {
-  const [image, setImage] =
-    useState<File | null>(null);
-
-  const [preview, setPreview] =
-    useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState("");
 
   const [gender, setGender] =
     useState<"female" | "male">("female");
 
-  const [variants, setVariants] =
-    useState<Variant[]>([
-      createDefaultVariant(),
-    ]);
+  const [variants, setVariants] = useState<Variant[]>([
+    createDefaultVariant(),
+  ]);
 
-  const [activeVariant, setActiveVariant] =
-    useState(0);
+  const [activeVariant, setActiveVariant] = useState(0);
 
   const [colorMode, setColorMode] =
-    useState<"shared" | "individual">(
-      "shared"
-    );
+    useState<"shared" | "individual">("shared");
 
   const [sharedColor, setSharedColor] =
-    useState<ColorSettings>(
-      createDefaultColor()
-    );
+    useState<ColorSettings>(createDefaultColor());
 
   const [individualColors, setIndividualColors] =
     useState<ColorSettings[]>([
@@ -404,14 +393,9 @@ export default function Home() {
   const [resultImages, setResultImages] =
     useState<string[]>([]);
 
-  const [loading, setLoading] =
-    useState(false);
-
-  const [loadingStep, setLoadingStep] =
-    useState(0);
-
-  const [error, setError] =
-    useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const [error, setError] = useState("");
 
   const loadingMessages = [
     "Подготавливаем фотографию…",
@@ -426,15 +410,12 @@ export default function Home() {
     "Сохраняем результаты…",
   ];
 
-  const currentVariant =
-    variants[activeVariant];
+  const currentVariant = variants[activeVariant];
 
   const maleLengthVisible =
     gender === "male" &&
-    (currentVariant.maleForm ===
-      "undercut" ||
-      currentVariant.maleForm ===
-        "elongated");
+    (currentVariant.maleForm === "undercut" ||
+      currentVariant.maleForm === "elongated");
 
   useEffect(() => {
     if (!loading) return;
@@ -442,8 +423,7 @@ export default function Home() {
     const interval = setInterval(() => {
       setLoadingStep(
         (current) =>
-          (current + 1) %
-          loadingMessages.length
+          (current + 1) % loadingMessages.length
       );
     }, 2200);
 
@@ -451,26 +431,18 @@ export default function Home() {
   }, [loading, loadingMessages.length]);
 
   useEffect(() => {
-    if (
-      individualColors.length ===
-      variants.length
-    ) {
+    if (individualColors.length === variants.length) {
       return;
     }
 
     setIndividualColors((current) => {
       const next = [...current];
 
-      while (
-        next.length < variants.length
-      ) {
+      while (next.length < variants.length) {
         next.push(createDefaultColor());
       }
 
-      return next.slice(
-        0,
-        variants.length
-      );
+      return next.slice(0, variants.length);
     });
   }, [variants.length, individualColors.length]);
 
@@ -478,9 +450,7 @@ export default function Home() {
     if (!file) return;
 
     setImage(file);
-    setPreview(
-      URL.createObjectURL(file)
-    );
+    setPreview(URL.createObjectURL(file));
     setResultImages([]);
     setError("");
   }
@@ -490,14 +460,13 @@ export default function Home() {
     changes: Partial<Variant>
   ) {
     setVariants((current) =>
-      current.map(
-        (variant, variantIndex) =>
-          variantIndex === index
-            ? {
-                ...variant,
-                ...changes,
-              }
-            : variant
+      current.map((variant, variantIndex) =>
+        variantIndex === index
+          ? {
+              ...variant,
+              ...changes,
+            }
+          : variant
       )
     );
   }
@@ -507,60 +476,46 @@ export default function Home() {
     changes: Partial<ColorSettings>
   ) {
     setIndividualColors((current) =>
-      current.map(
-        (color, colorIndex) =>
-          colorIndex === index
-            ? {
-                ...color,
-                ...changes,
-              }
-            : color
+      current.map((color, colorIndex) =>
+        colorIndex === index
+          ? {
+              ...color,
+              ...changes,
+            }
+          : color
       )
     );
   }
 
   function addVariant() {
-    if (variants.length >= 3) {
-      return;
-    }
+    if (variants.length >= 3) return;
 
     setVariants((current) => [
       ...current,
       createDefaultVariant(),
     ]);
 
-    setIndividualColors(
-      (current) => [
-        ...current,
-        createDefaultColor(),
-      ]
-    );
+    setIndividualColors((current) => [
+      ...current,
+      createDefaultColor(),
+    ]);
 
-    setActiveVariant(
-      variants.length
-    );
-
+    setActiveVariant(variants.length);
     setError("");
   }
 
-  function removeVariant(
-    index: number
-  ) {
-    if (variants.length <= 1) {
-      return;
-    }
+  function removeVariant(index: number) {
+    if (variants.length <= 1) return;
 
     setVariants((current) =>
       current.filter(
-        (_, variantIndex) =>
-          variantIndex !== index
+        (_, variantIndex) => variantIndex !== index
       )
     );
 
     setIndividualColors((current) =>
       current.filter(
-        (_, colorIndex) =>
-          colorIndex !== index
+        (_, colorIndex) => colorIndex !== index
       )
     );
 
@@ -573,10 +528,7 @@ export default function Home() {
         current === index &&
         current >= variants.length - 1
       ) {
-        return Math.max(
-          0,
-          current - 1
-        );
+        return Math.max(0, current - 1);
       }
 
       return current;
@@ -589,20 +541,21 @@ export default function Home() {
     nextGender: "female" | "male"
   ) {
     setGender(nextGender);
+
     setVariants([
       createDefaultVariant(),
     ]);
+
     setIndividualColors([
       createDefaultColor(),
     ]);
+
     setActiveVariant(0);
     setResultImages([]);
     setError("");
   }
 
-  function handleMaleFormChange(
-    value: string
-  ) {
+  function handleMaleFormChange(value: string) {
     const changes: Partial<Variant> = {
       maleForm: value,
     };
@@ -614,10 +567,7 @@ export default function Home() {
       changes.length = "short";
     }
 
-    updateVariant(
-      activeVariant,
-      changes
-    );
+    updateVariant(activeVariant, changes);
   }
 
   function generateColorLabel(
@@ -629,18 +579,12 @@ export default function Home() {
 
     const technique =
       coloringTechniques.find(
-        (item) =>
-          item.value ===
-          color.coloring
+        (item) => item.value === color.coloring
       )?.label || "";
 
     const shade =
-      shadesByTone[
-        color.colorDepth
-      ]?.find(
-        (item) =>
-          item.value ===
-          color.colorShade
+      shadesByTone[color.colorDepth]?.find(
+        (item) => item.value === color.colorShade
       )?.label || "";
 
     return `${technique} · ${color.colorDepth} тон · ${shade}`;
@@ -648,17 +592,13 @@ export default function Home() {
 
   async function generate() {
     if (!image) {
-      setError(
-        "Сначала загрузите фотографию."
-      );
+      setError("Сначала загрузите фотографию.");
       return;
     }
 
     const colors =
       colorMode === "shared"
-        ? variants.map(
-            () => sharedColor
-          )
+        ? variants.map(() => sharedColor)
         : individualColors;
 
     for (const color of colors) {
@@ -689,30 +629,16 @@ export default function Home() {
     setResultImages([]);
 
     try {
-      const formData =
-        new FormData();
+      const formData = new FormData();
 
-      formData.append(
-        "image",
-        image
-      );
-
-      formData.append(
-        "gender",
-        gender
-      );
-
+      formData.append("image", image);
+      formData.append("gender", gender);
       formData.append(
         "variants",
-        JSON.stringify(
-          variants
-        )
+        JSON.stringify(variants)
       );
 
-      formData.append(
-        "colorMode",
-        colorMode
-      );
+      formData.append("colorMode", colorMode);
 
       formData.append(
         "sharedColorDepth",
@@ -731,19 +657,16 @@ export default function Home() {
 
       formData.append(
         "individualColors",
-        JSON.stringify(
-          individualColors
-        )
+        JSON.stringify(individualColors)
       );
 
-      const response =
-        await fetch(
-          "/api/generate",
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
+      const response = await fetch(
+        "/api/generate",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       let data: {
         success?: boolean;
@@ -753,18 +676,14 @@ export default function Home() {
       };
 
       try {
-        data =
-          await response.json();
+        data = await response.json();
       } catch {
         throw new Error(
           `Сервер вернул некорректный ответ. Код: ${response.status}`
         );
       }
 
-      if (
-        !response.ok ||
-        !data.success
-      ) {
+      if (!response.ok || !data.success) {
         throw new Error(
           data.error ||
             `Не удалось создать варианты прически. Код: ${response.status}`
@@ -772,9 +691,7 @@ export default function Home() {
       }
 
       if (
-        !Array.isArray(
-          data.results
-        ) ||
+        !Array.isArray(data.results) ||
         data.results.length === 0
       ) {
         throw new Error(
@@ -782,9 +699,7 @@ export default function Home() {
         );
       }
 
-      setResultImages(
-        data.results
-      );
+      setResultImages(data.results);
     } catch (err) {
       setError(
         err instanceof Error
@@ -799,22 +714,18 @@ export default function Home() {
   return (
     <main>
       <div className="container">
+
         <header className="header">
           <div>
-            <h1>
-              ПРОФКОСМО AI
-            </h1>
-
-            <p>
-              ИИ-подбор прически
-            </p>
+            <h1>ПРОФКОСМО AI</h1>
+            <p>ИИ-подбор прически</p>
           </div>
         </header>
 
+        {/* PHOTO */}
+
         <section className="card">
-          <h2>
-            1. Фотография
-          </h2>
+          <h2>1. Фотография</h2>
 
           <label className="upload">
             {preview ? (
@@ -839,18 +750,17 @@ export default function Home() {
               accept="image/*"
               onChange={(event) =>
                 handleImage(
-                  event.target.files?.[0] ||
-                    null
+                  event.target.files?.[0] || null
                 )
               }
             />
           </label>
         </section>
 
+        {/* HAIRSTYLE PARAMETERS */}
+
         <section className="card">
-          <h2>
-            2. Параметры прически
-          </h2>
+          <h2>2. Параметры прически</h2>
 
           <OptionGroup
             title="Пол"
@@ -867,67 +777,166 @@ export default function Home() {
             value={gender}
             onChange={(value) =>
               changeGender(
-                value as
-                  | "female"
-                  | "male"
+                value as "female" | "male"
               )
             }
           />
 
-          <div className="variant-selector">
-            {variants.map(
-              (
-                variant,
-                index
-              ) => (
-                <button
-                  key={index}
-                  type="button"
-                  className={`variant-card ${
-                    activeVariant ===
-                    index
-                      ? "variant-card-active"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    setActiveVariant(
-                      index
-                    )
-                  }
-                >
-                  <span className="variant-card-title">
-                    Вариант {index + 1}
-                  </span>
+          {/* VARIANT CARDS */}
 
-                  <span className="variant-card-summary">
-                    {getVariantSummary(
-                      variant,
-                      gender
-                    )}
-                  </span>
-                </button>
-              )
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(3, minmax(0, 1fr))",
+              gap: "12px",
+              width: "100%",
+              marginBottom: "30px",
+            }}
+          >
+            {variants.map(
+              (variant, index) => {
+                const active =
+                  activeVariant === index;
+
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() =>
+                      setActiveVariant(index)
+                    }
+                    style={{
+                      appearance: "none",
+                      WebkitAppearance: "none",
+
+                      width: "100%",
+                      minWidth: 0,
+                      minHeight: "94px",
+
+                      boxSizing: "border-box",
+
+                      display: "block",
+
+                      padding: "16px",
+
+                      border: active
+                        ? "2px solid #d46925"
+                        : "1px solid #ddd8ce",
+
+                      borderRadius: "14px",
+
+                      background: active
+                        ? "#fff0e4"
+                        : "#faf9f6",
+
+                      color: "#24231f",
+
+                      textAlign: "left",
+
+                      fontFamily:
+                        "Arial, Helvetica, sans-serif",
+
+                      cursor: "pointer",
+
+                      transition:
+                        "all 0.15s ease",
+
+                      boxShadow: "none",
+
+                      margin: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "block",
+                        marginBottom: "8px",
+                        fontSize: "15px",
+                        lineHeight: "1.2",
+                        fontWeight: 700,
+                        color: active
+                          ? "#d46925"
+                          : "#24231f",
+                      }}
+                    >
+                      Вариант {index + 1}
+                    </span>
+
+                    <span
+                      style={{
+                        display: "block",
+                        fontSize: "12px",
+                        lineHeight: "1.45",
+                        color: active
+                          ? "#665143"
+                          : "#77736c",
+                      }}
+                    >
+                      {getVariantSummary(
+                        variant,
+                        gender
+                      )}
+                    </span>
+                  </button>
+                );
+              }
             )}
 
             {variants.length < 3 ? (
               <button
                 type="button"
-                className="variant-add"
-                onClick={
-                  addVariant
-                }
+                onClick={addVariant}
+                style={{
+                  appearance: "none",
+                  WebkitAppearance: "none",
+
+                  width: "100%",
+                  minWidth: 0,
+                  minHeight: "94px",
+
+                  boxSizing: "border-box",
+
+                  display: "flex",
+
+                  alignItems: "center",
+                  justifyContent: "center",
+
+                  padding: "16px",
+
+                  border:
+                    "1px dashed #c9c2b8",
+
+                  borderRadius: "14px",
+
+                  background: "#fff",
+
+                  color: "#77736c",
+
+                  textAlign: "center",
+
+                  fontFamily:
+                    "Arial, Helvetica, sans-serif",
+
+                  fontSize: "14px",
+                  fontWeight: 600,
+
+                  cursor: "pointer",
+
+                  margin: 0,
+                }}
               >
                 + Добавить вариант
               </button>
             ) : null}
           </div>
 
+          {/* ACTIVE VARIANT */}
+
           <div className="variant-editor">
             <div className="variant-editor-header">
               <div>
                 <h3>
-                  Вариант{" "}
-                  {activeVariant + 1}
+                  Вариант {activeVariant + 1}
                 </h3>
 
                 <p>
@@ -936,8 +945,7 @@ export default function Home() {
                 </p>
               </div>
 
-              {variants.length >
-              1 ? (
+              {variants.length > 1 ? (
                 <button
                   type="button"
                   className="variant-remove"
@@ -957,15 +965,12 @@ export default function Home() {
                 <OptionGroup
                   title="Длина"
                   options={lengths}
-                  value={
-                    currentVariant.length
-                  }
+                  value={currentVariant.length}
                   onChange={(value) =>
                     updateVariant(
                       activeVariant,
                       {
-                        length:
-                          value,
+                        length: value,
                       }
                     )
                   }
@@ -973,9 +978,7 @@ export default function Home() {
 
                 <OptionGroup
                   title="Структура волос"
-                  options={
-                    structures
-                  }
+                  options={structures}
                   value={
                     currentVariant.structure
                   }
@@ -983,8 +986,7 @@ export default function Home() {
                     updateVariant(
                       activeVariant,
                       {
-                        structure:
-                          value,
+                        structure: value,
                       }
                     )
                   }
@@ -992,9 +994,7 @@ export default function Home() {
 
                 <OptionGroup
                   title="Форма стрижки"
-                  options={
-                    femaleForms
-                  }
+                  options={femaleForms}
                   value={
                     currentVariant.femaleForm
                   }
@@ -1002,8 +1002,7 @@ export default function Home() {
                     updateVariant(
                       activeVariant,
                       {
-                        femaleForm:
-                          value,
+                        femaleForm: value,
                       }
                     )
                   }
@@ -1011,9 +1010,7 @@ export default function Home() {
 
                 <OptionGroup
                   title="Чёлка"
-                  options={
-                    femaleBangs
-                  }
+                  options={femaleBangs}
                   value={
                     currentVariant.femaleBang
                   }
@@ -1021,8 +1018,7 @@ export default function Home() {
                     updateVariant(
                       activeVariant,
                       {
-                        femaleBang:
-                          value,
+                        femaleBang: value,
                       }
                     )
                   }
@@ -1030,9 +1026,7 @@ export default function Home() {
 
                 <OptionGroup
                   title="Пробор"
-                  options={
-                    femalePartings
-                  }
+                  options={femalePartings}
                   value={
                     currentVariant.femaleParting
                   }
@@ -1040,8 +1034,7 @@ export default function Home() {
                     updateVariant(
                       activeVariant,
                       {
-                        femaleParting:
-                          value,
+                        femaleParting: value,
                       }
                     )
                   }
@@ -1057,8 +1050,7 @@ export default function Home() {
                     updateVariant(
                       activeVariant,
                       {
-                        femaleVolume:
-                          value,
+                        femaleVolume: value,
                       }
                     )
                   }
@@ -1066,9 +1058,7 @@ export default function Home() {
 
                 <OptionGroup
                   title="Укладка"
-                  options={
-                    stylings
-                  }
+                  options={stylings}
                   value={
                     currentVariant.femaleStyling
                   }
@@ -1076,8 +1066,7 @@ export default function Home() {
                     updateVariant(
                       activeVariant,
                       {
-                        femaleStyling:
-                          value,
+                        femaleStyling: value,
                       }
                     )
                   }
@@ -1093,8 +1082,7 @@ export default function Home() {
                     updateVariant(
                       activeVariant,
                       {
-                        femaleEnds:
-                          value,
+                        femaleEnds: value,
                       }
                     )
                   }
@@ -1104,9 +1092,7 @@ export default function Home() {
               <>
                 <OptionGroup
                   title="Форма"
-                  options={
-                    maleForms
-                  }
+                  options={maleForms}
                   value={
                     currentVariant.maleForm
                   }
@@ -1118,20 +1104,15 @@ export default function Home() {
                 {maleLengthVisible ? (
                   <OptionGroup
                     title="Длина"
-                    options={
-                      lengths
-                    }
+                    options={lengths}
                     value={
                       currentVariant.length
                     }
-                    onChange={(
-                      value
-                    ) =>
+                    onChange={(value) =>
                       updateVariant(
                         activeVariant,
                         {
-                          length:
-                            value,
+                          length: value,
                         }
                       )
                     }
@@ -1140,9 +1121,7 @@ export default function Home() {
 
                 <OptionGroup
                   title="Структура волос"
-                  options={
-                    structures
-                  }
+                  options={structures}
                   value={
                     currentVariant.structure
                   }
@@ -1150,8 +1129,7 @@ export default function Home() {
                     updateVariant(
                       activeVariant,
                       {
-                        structure:
-                          value,
+                        structure: value,
                       }
                     )
                   }
@@ -1159,9 +1137,7 @@ export default function Home() {
 
                 <OptionGroup
                   title="Виски"
-                  options={
-                    temples
-                  }
+                  options={temples}
                   value={
                     currentVariant.maleTemples
                   }
@@ -1169,8 +1145,7 @@ export default function Home() {
                     updateVariant(
                       activeVariant,
                       {
-                        maleTemples:
-                          value,
+                        maleTemples: value,
                       }
                     )
                   }
@@ -1180,24 +1155,21 @@ export default function Home() {
           </div>
         </section>
 
+        {/* COLOR */}
+
         <section className="card">
-          <h2>
-            3. Цвет
-          </h2>
+          <h2>3. Цвет</h2>
 
           <div className="color-mode">
             <button
               type="button"
               className={`color-mode-option ${
-                colorMode ===
-                "shared"
+                colorMode === "shared"
                   ? "color-mode-active"
                   : ""
               }`}
               onClick={() =>
-                setColorMode(
-                  "shared"
-                )
+                setColorMode("shared")
               }
             >
               <strong>
@@ -1213,15 +1185,12 @@ export default function Home() {
             <button
               type="button"
               className={`color-mode-option ${
-                colorMode ===
-                "individual"
+                colorMode === "individual"
                   ? "color-mode-active"
                   : ""
               }`}
               onClick={() =>
-                setColorMode(
-                  "individual"
-                )
+                setColorMode("individual")
               }
             >
               <strong>
@@ -1235,39 +1204,26 @@ export default function Home() {
             </button>
           </div>
 
-          {colorMode ===
-          "shared" ? (
-            <>
-              <ColorSettingsBlock
-                color={
-                  sharedColor
-                }
-                onChange={(
-                  changes
-                ) =>
-                  setSharedColor(
-                    (
-                      current
-                    ) => ({
-                      ...current,
-                      ...changes,
-                    })
-                  )
-                }
-              />
-            </>
+          {colorMode === "shared" ? (
+            <ColorSettingsBlock
+              color={sharedColor}
+              onChange={(changes) =>
+                setSharedColor(
+                  (current) => ({
+                    ...current,
+                    ...changes,
+                  })
+                )
+              }
+            />
           ) : (
             <div className="individual-colors">
               {individualColors.map(
-                (
-                  color,
-                  index
-                ) => (
+                (color, index) => (
                   <div
                     key={index}
                     className={`individual-color-card ${
-                      activeVariant ===
-                      index
+                      activeVariant === index
                         ? "individual-color-active"
                         : ""
                     }`}
@@ -1276,14 +1232,11 @@ export default function Home() {
                       type="button"
                       className="individual-color-header"
                       onClick={() =>
-                        setActiveVariant(
-                          index
-                        )
+                        setActiveVariant(index)
                       }
                     >
                       <strong>
-                        Вариант{" "}
-                        {index + 1}
+                        Вариант {index + 1}
                       </strong>
 
                       <span>
@@ -1295,9 +1248,7 @@ export default function Home() {
 
                     <ColorSettingsBlock
                       color={color}
-                      onChange={(
-                        changes
-                      ) =>
+                      onChange={(changes) =>
                         updateIndividualColor(
                           index,
                           changes
@@ -1311,36 +1262,30 @@ export default function Home() {
           )}
         </section>
 
+        {/* GENERATE */}
+
         <section className="card">
           {loading ? (
             <div className="loading">
               <div className="loading-spinner" />
 
               <strong>
-                {loadingMessages[
-                  loadingStep
-                ]}
+                {loadingMessages[loadingStep]}
               </strong>
 
               <span>
-                Это может занять некоторое
-                время
+                Это может занять некоторое время
               </span>
             </div>
           ) : (
             <button
               className="generate"
               type="button"
-              disabled={
-                !image
-              }
-              onClick={
-                generate
-              }
+              disabled={!image}
+              onClick={generate}
             >
               Подобрать{" "}
-              {variants.length ===
-              1
+              {variants.length === 1
                 ? "вариант"
                 : `${variants.length} варианта`}
             </button>
@@ -1353,12 +1298,11 @@ export default function Home() {
           ) : null}
         </section>
 
-        {resultImages.length >
-        0 ? (
+        {/* RESULTS */}
+
+        {resultImages.length > 0 ? (
           <section className="card results">
-            <h2>
-              Результаты
-            </h2>
+            <h2>Результаты</h2>
 
             <p className="results-description">
               Каждый вариант создан
@@ -1368,17 +1312,13 @@ export default function Home() {
 
             <div className="results-grid">
               {resultImages.map(
-                (
-                  src,
-                  index
-                ) => (
+                (src, index) => (
                   <div
                     className="result"
                     key={`${src}-${index}`}
                   >
                     <div className="result-number">
-                      Вариант{" "}
-                      {index + 1}
+                      Вариант {index + 1}
                     </div>
 
                     <img
@@ -1393,6 +1333,7 @@ export default function Home() {
             </div>
           </section>
         ) : null}
+
       </div>
     </main>
   );
