@@ -7,6 +7,19 @@ type Option = {
   label: string;
 };
 
+type Variant = {
+  length: string;
+  structure: string;
+  femaleForm: string;
+  femaleBang: string;
+  femaleParting: string;
+  femaleVolume: string;
+  femaleStyling: string;
+  femaleEnds: string;
+  maleForm: string;
+  maleTemples: string;
+};
+
 const lengths: Option[] = [
   { value: "very-short", label: "Очень короткая" },
   { value: "short", label: "Короткая" },
@@ -195,9 +208,7 @@ function OptionGroup({
             key={option.value}
             type="button"
             className={`option ${
-              value === option.value
-                ? "option-active"
-                : ""
+              value === option.value ? "option-active" : ""
             }`}
             onClick={() => onChange(option.value)}
           >
@@ -209,84 +220,75 @@ function OptionGroup({
   );
 }
 
-export default function Home() {
-  const [image, setImage] =
-    useState<File | null>(null);
+function createDefaultVariant(): Variant {
+  return {
+    length: "medium",
+    structure: "straight",
+    femaleForm: "ai",
+    femaleBang: "none",
+    femaleParting: "center",
+    femaleVolume: "natural",
+    femaleStyling: "natural",
+    femaleEnds: "straight",
+    maleForm: "classic",
+    maleTemples: "straight",
+  };
+}
 
-  const [preview, setPreview] =
-    useState<string>("");
+export default function Home() {
+  const [image, setImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string>("");
 
   const [gender, setGender] =
     useState<"female" | "male">("female");
 
-  const [length, setLength] =
-    useState("medium");
+  const [variants, setVariants] = useState<Variant[]>([
+    createDefaultVariant(),
+    createDefaultVariant(),
+    createDefaultVariant(),
+  ]);
 
-  const [structure, setStructure] =
-    useState("straight");
+  const [colorDepth, setColorDepth] = useState("");
+  const [colorShade, setColorShade] = useState("");
+  const [coloring, setColoring] = useState("none");
 
-  const [femaleForm, setFemaleForm] =
-    useState("ai");
+  const [activeVariant, setActiveVariant] = useState(0);
 
-  const [femaleBang, setFemaleBang] =
-    useState("none");
+  const [resultImages, setResultImages] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const [femaleParting, setFemaleParting] =
-    useState("center");
-
-  const [femaleVolume, setFemaleVolume] =
-    useState("natural");
-
-  const [femaleStyling, setFemaleStyling] =
-    useState("natural");
-
-  const [femaleEnds, setFemaleEnds] =
-    useState("straight");
-
-  const [maleForm, setMaleForm] =
-    useState("classic");
-
-  const [maleTemples, setMaleTemples] =
-    useState("straight");
-
-  const [colorDepth, setColorDepth] =
-    useState("");
-
-  const [colorShade, setColorShade] =
-    useState("");
-
-  const [coloring, setColoring] =
-    useState("none");
-
-  const [resultImages, setResultImages] =
-    useState<string[]>([]);
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
+  const currentVariant = variants[activeVariant];
 
   const maleLengthVisible =
-    maleForm === "undercut" ||
-    maleForm === "elongated";
+    currentVariant.maleForm === "undercut" ||
+    currentVariant.maleForm === "elongated";
 
   const toneOptions =
-    coloring === "blond"
-      ? blondToneLevels
-      : allToneLevels;
+    coloring === "blond" ? blondToneLevels : allToneLevels;
 
   const availableShades = colorDepth
     ? shadesByTone[colorDepth] || []
     : [];
 
+  function updateVariant(
+    index: number,
+    changes: Partial<Variant>
+  ) {
+    setVariants((current) =>
+      current.map((variant, i) =>
+        i === index
+          ? { ...variant, ...changes }
+          : variant
+      )
+    );
+  }
+
   function handleImage(file: File | null) {
     if (!file) return;
 
     setImage(file);
-    setPreview(
-      URL.createObjectURL(file)
-    );
+    setPreview(URL.createObjectURL(file));
     setResultImages([]);
     setError("");
   }
@@ -295,40 +297,44 @@ export default function Home() {
     nextGender: "female" | "male"
   ) {
     setGender(nextGender);
-    setStructure("straight");
 
-    if (nextGender === "female") {
-      setLength("medium");
+    setVariants(
+      Array.from({ length: 3 }, () =>
+        createDefaultVariant()
+      ).map((variant) =>
+        nextGender === "male"
+          ? {
+              ...variant,
+              length: "short",
+              structure: "straight",
+              maleForm: "classic",
+              maleTemples: "straight",
+            }
+          : variant
+      )
+    );
 
-      setFemaleForm("ai");
-      setFemaleBang("none");
-      setFemaleParting("center");
-      setFemaleVolume("natural");
-      setFemaleStyling("natural");
-      setFemaleEnds("straight");
-    } else {
-      setMaleForm("classic");
-      setMaleTemples("straight");
-      setLength("short");
-    }
+    setActiveVariant(0);
+    setResultImages([]);
+    setError("");
   }
 
-  function handleMaleFormChange(
-    value: string
-  ) {
-    setMaleForm(value);
+  function handleMaleFormChange(value: string) {
+    const changes: Partial<Variant> = {
+      maleForm: value,
+    };
 
     if (
       value !== "undercut" &&
       value !== "elongated"
     ) {
-      setLength("short");
+      changes.length = "short";
     }
+
+    updateVariant(activeVariant, changes);
   }
 
-  function handleColoringChange(
-    value: string
-  ) {
+  function handleColoringChange(value: string) {
     setColoring(value);
 
     if (value === "none") {
@@ -338,7 +344,6 @@ export default function Home() {
     }
 
     if (value === "blond") {
-      // Блонд начинается с 7 уровня.
       if (
         !colorDepth ||
         Number(colorDepth) < 7
@@ -346,38 +351,28 @@ export default function Home() {
         setColorDepth("7");
         setColorShade("");
       }
-
-      return;
     }
   }
 
-  function handleToneChange(
-    value: string
-  ) {
+  function handleToneChange(value: string) {
     setColorDepth(value);
     setColorShade("");
   }
 
   async function generate() {
     if (!image) {
-      setError(
-        "Сначала загрузите фотографию."
-      );
+      setError("Сначала загрузите фотографию.");
       return;
     }
 
     if (coloring !== "none") {
       if (!colorDepth) {
-        setError(
-          "Выберите уровень тона."
-        );
+        setError("Выберите уровень тона.");
         return;
       }
 
       if (!colorShade) {
-        setError(
-          "Выберите оттенок."
-        );
+        setError("Выберите оттенок.");
         return;
       }
     }
@@ -387,187 +382,57 @@ export default function Home() {
     setResultImages([]);
 
     try {
-      const formData =
-        new FormData();
+      const formData = new FormData();
 
-      formData.append(
-        "image",
-        image
-      );
+      formData.append("image", image);
+      formData.append("gender", gender);
 
-      formData.append(
-        "gender",
-        gender
-      );
-
-      if (
-        gender === "female" ||
-        maleLengthVisible
-      ) {
-        formData.append(
-          "length",
-          length
-        );
-      } else {
-        formData.append(
-          "length",
-          "short"
-        );
-      }
-
-      formData.append(
-        "structure",
-        structure
-      );
-
-      if (gender === "female") {
-        formData.append(
-          "haircutForm",
-          femaleForm
-        );
-
-        formData.append(
-          "bangs",
-          femaleBang
-        );
-
-        formData.append(
-          "parting",
-          femaleParting
-        );
-
-        formData.append(
-          "volume",
-          femaleVolume
-        );
-
-        formData.append(
-          "styling",
-          femaleStyling
-        );
-
-        formData.append(
-          "ends",
-          femaleEnds
-        );
-
-        formData.append(
-          "maleForm",
-          ""
-        );
-
-        formData.append(
-          "temples",
-          ""
-        );
-      } else {
-        formData.append(
-          "haircutForm",
-          ""
-        );
-
-        formData.append(
-          "maleForm",
-          maleForm
-        );
-
-        formData.append(
-          "temples",
-          maleTemples
-        );
-
-        formData.append(
-          "bangs",
-          ""
-        );
-
-        formData.append(
-          "parting",
-          ""
-        );
-
-        formData.append(
-          "volume",
-          ""
-        );
-
-        formData.append(
-          "styling",
-          ""
-        );
-
-        formData.append(
-          "ends",
-          ""
-        );
-      }
-
-      formData.append(
-        "colorDepth",
-        colorDepth
-      );
-
-      formData.append(
-        "colorShade",
-        colorShade
-      );
-
-      formData.append(
-        "coloring",
-        coloring
-      );
-
-      // Пока один результат.
-      // Три варианта подключим после решения
-      // вопроса с хранением изображений.
+      // Новый интерфейс уже хранит 3 самостоятельных
+      // набора параметров.
       formData.append(
         "variants",
-        "1"
+        JSON.stringify(variants)
       );
 
-      const response =
-        await fetch(
-          "/api/generate",
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
+      // Цвет общий для всех трёх вариантов.
+      formData.append("colorDepth", colorDepth);
+      formData.append("colorShade", colorShade);
+      formData.append("coloring", coloring);
+
+      const response = await fetch(
+        "/api/generate",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       let data: any = null;
 
       try {
-        data =
-          await response.json();
+        data = await response.json();
       } catch {
         throw new Error(
           `Сервер вернул некорректный ответ. Код: ${response.status}`
         );
       }
 
-      if (
-        !response.ok ||
-        !data.success
-      ) {
+      if (!response.ok || !data.success) {
         throw new Error(
           data.error ||
-            `Не удалось создать вариант прически. Код: ${response.status}`
+            `Не удалось создать варианты прически. Код: ${response.status}`
         );
       }
 
       const images =
-        Array.isArray(
-          data.imageUrls
-        )
+        Array.isArray(data.imageUrls)
           ? data.imageUrls
           : data.imageUrl
           ? [data.imageUrl]
           : [];
 
       if (!images.length) {
-        throw new Error(
-          "AI не вернул изображение."
-        );
+        throw new Error("AI не вернул изображения.");
       }
 
       setResultImages(images);
@@ -587,20 +452,13 @@ export default function Home() {
       <div className="container">
         <header className="header">
           <div>
-            <h1>
-              ПРОФКОСМО AI
-            </h1>
-
-            <p>
-              ИИ-подбор прически
-            </p>
+            <h1>ПРОФКОСМО AI</h1>
+            <p>ИИ-подбор прически</p>
           </div>
         </header>
 
         <section className="card">
-          <h2>
-            1. Фотография
-          </h2>
+          <h2>1. Фотография</h2>
 
           <label className="upload">
             {preview ? (
@@ -615,8 +473,7 @@ export default function Home() {
                 </strong>
 
                 <span>
-                  Лучше использовать
-                  фото анфас
+                  Лучше использовать фото анфас
                 </span>
               </div>
             )}
@@ -626,8 +483,7 @@ export default function Home() {
               accept="image/*"
               onChange={(e) =>
                 handleImage(
-                  e.target.files?.[0] ||
-                    null
+                  e.target.files?.[0] || null
                 )
               }
             />
@@ -635,9 +491,7 @@ export default function Home() {
         </section>
 
         <section className="card">
-          <h2>
-            2. Параметры
-          </h2>
+          <h2>2. Параметры прически</h2>
 
           <OptionGroup
             title="Пол"
@@ -654,27 +508,54 @@ export default function Home() {
             value={gender}
             onChange={(value) =>
               resetForGender(
-                value as
-                  | "female"
-                  | "male"
+                value as "female" | "male"
               )
             }
           />
+
+          <div className="variant-tabs">
+            {[0, 1, 2].map((index) => (
+              <button
+                key={index}
+                type="button"
+                className={`variant-tab ${
+                  activeVariant === index
+                    ? "variant-tab-active"
+                    : ""
+                }`}
+                onClick={() =>
+                  setActiveVariant(index)
+                }
+              >
+                Вариант {index + 1}
+              </button>
+            ))}
+          </div>
 
           {gender === "female" ? (
             <OptionGroup
               title="Длина"
               options={lengths}
-              value={length}
-              onChange={setLength}
+              value={currentVariant.length}
+              onChange={(value) =>
+                updateVariant(
+                  activeVariant,
+                  { length: value }
+                )
+              }
             />
           ) : null}
 
           <OptionGroup
             title="Структура волос"
             options={structures}
-            value={structure}
-            onChange={setStructure}
+            value={currentVariant.structure}
+            onChange={(value) =>
+              updateVariant(
+                activeVariant,
+                { structure: value }
+              )
+            }
           />
 
           {gender === "female" ? (
@@ -682,43 +563,73 @@ export default function Home() {
               <OptionGroup
                 title="Форма стрижки"
                 options={femaleForms}
-                value={femaleForm}
-                onChange={setFemaleForm}
+                value={currentVariant.femaleForm}
+                onChange={(value) =>
+                  updateVariant(
+                    activeVariant,
+                    { femaleForm: value }
+                  )
+                }
               />
 
               <OptionGroup
                 title="Чёлка"
                 options={femaleBangs}
-                value={femaleBang}
-                onChange={setFemaleBang}
+                value={currentVariant.femaleBang}
+                onChange={(value) =>
+                  updateVariant(
+                    activeVariant,
+                    { femaleBang: value }
+                  )
+                }
               />
 
               <OptionGroup
                 title="Пробор"
                 options={femalePartings}
-                value={femaleParting}
-                onChange={setFemaleParting}
+                value={currentVariant.femaleParting}
+                onChange={(value) =>
+                  updateVariant(
+                    activeVariant,
+                    { femaleParting: value }
+                  )
+                }
               />
 
               <OptionGroup
                 title="Объём"
                 options={volumes}
-                value={femaleVolume}
-                onChange={setFemaleVolume}
+                value={currentVariant.femaleVolume}
+                onChange={(value) =>
+                  updateVariant(
+                    activeVariant,
+                    { femaleVolume: value }
+                  )
+                }
               />
 
               <OptionGroup
                 title="Укладка"
                 options={stylings}
-                value={femaleStyling}
-                onChange={setFemaleStyling}
+                value={currentVariant.femaleStyling}
+                onChange={(value) =>
+                  updateVariant(
+                    activeVariant,
+                    { femaleStyling: value }
+                  )
+                }
               />
 
               <OptionGroup
                 title="Концы"
                 options={ends}
-                value={femaleEnds}
-                onChange={setFemaleEnds}
+                value={currentVariant.femaleEnds}
+                onChange={(value) =>
+                  updateVariant(
+                    activeVariant,
+                    { femaleEnds: value }
+                  )
+                }
               />
             </>
           ) : (
@@ -726,35 +637,41 @@ export default function Home() {
               <OptionGroup
                 title="Форма"
                 options={maleForms}
-                value={maleForm}
-                onChange={
-                  handleMaleFormChange
-                }
+                value={currentVariant.maleForm}
+                onChange={handleMaleFormChange}
               />
 
               {maleLengthVisible ? (
                 <OptionGroup
                   title="Длина"
                   options={lengths}
-                  value={length}
-                  onChange={setLength}
+                  value={currentVariant.length}
+                  onChange={(value) =>
+                    updateVariant(
+                      activeVariant,
+                      { length: value }
+                    )
+                  }
                 />
               ) : null}
 
               <OptionGroup
                 title="Виски"
                 options={temples}
-                value={maleTemples}
-                onChange={setMaleTemples}
+                value={currentVariant.maleTemples}
+                onChange={(value) =>
+                  updateVariant(
+                    activeVariant,
+                    { maleTemples: value }
+                  )
+                }
               />
             </>
           )}
         </section>
 
         <section className="card">
-          <h2>
-            3. Цвет
-          </h2>
+          <h2>3. Цвет — общий для всех вариантов</h2>
 
           <OptionGroup
             title="Уровень тона"
@@ -776,9 +693,7 @@ export default function Home() {
             title="Техника окрашивания"
             options={coloringTechniques}
             value={coloring}
-            onChange={
-              handleColoringChange
-            }
+            onChange={handleColoringChange}
           />
         </section>
 
@@ -790,26 +705,21 @@ export default function Home() {
             onClick={generate}
           >
             {loading
-              ? "Создаём вариант..."
-              : "Подобрать прическу"}
+              ? "Создаём варианты..."
+              : "Подобрать 3 варианта"}
           </button>
 
           {error ? (
-            <p className="error">
-              {error}
-            </p>
+            <p className="error">{error}</p>
           ) : null}
         </section>
 
         {resultImages.length > 0 ? (
           <section className="card results">
-            <h2>
-              Варианты
-            </h2>
+            <h2>Результаты</h2>
 
             <p className="results-description">
-              Результат на основе
-              выбранных параметров.
+              Три варианта на основе выбранных параметров.
             </p>
 
             <div className="results-grid">
@@ -820,8 +730,7 @@ export default function Home() {
                     key={`${src}-${index}`}
                   >
                     <div className="result-number">
-                      Вариант{" "}
-                      {index + 1}
+                      Вариант {index + 1}
                     </div>
 
                     <img
