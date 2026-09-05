@@ -120,7 +120,7 @@ main {
   text-align: center;
 }
 
-/* OPTION GROUPS */
+/* OPTIONS */
 
 .option-group {
   margin-bottom: 27px;
@@ -143,26 +143,18 @@ main {
   gap: 8px;
 }
 
-/* OPTION BUTTONS */
-
 .option {
   appearance: none;
   -webkit-appearance: none;
-
   border: 1px solid #ddd8ce;
   background: #fff;
   color: #4d4942;
-
   border-radius: 10px;
-
   padding: 11px 15px;
-
   cursor: pointer;
-
   font-size: 14px;
   line-height: 1.2;
   font-weight: 500;
-
   transition:
     background 0.15s ease,
     color 0.15s ease,
@@ -191,131 +183,139 @@ main {
    ========================================================= */
 
 .variant-selector {
+  width: 100%;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin: 0 0 30px;
 }
 
-/*
-   Повышаем специфичность намеренно.
-   Это гарантирует, что браузерные стили button
-   не вылезут наружу.
-*/
+/* Карточка варианта */
 
-.variant-selector button.variant-card,
-.variant-selector button.variant-add {
-  appearance: none;
-  -webkit-appearance: none;
+button.variant-card {
+  all: unset;
 
-  width: 100%;
-  min-width: 0;
-  min-height: 92px;
+  display: block !important;
 
-  margin: 0;
-  padding: 16px;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 94px !important;
 
-  border-radius: 14px;
+  box-sizing: border-box !important;
 
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.3;
+  padding: 16px !important;
 
-  cursor: pointer;
+  border: 1px solid #ddd8ce !important;
+  border-radius: 14px !important;
+
+  background: #faf9f6 !important;
+  color: #24231f !important;
+
+  text-align: left !important;
+
+  cursor: pointer !important;
+
+  font-family: Arial, Helvetica, sans-serif !important;
 
   transition:
     background 0.15s ease,
     border-color 0.15s ease,
     box-shadow 0.15s ease,
-    transform 0.1s ease;
+    transform 0.15s ease !important;
 }
 
-/* CARD */
-
-.variant-selector button.variant-card {
-  display: block;
-
-  text-align: left;
-
-  border: 1px solid #ddd8ce;
-  background: #faf9f6;
-  color: #24231f;
+button.variant-card:hover {
+  background: #fffaf5 !important;
+  border-color: #d46925 !important;
+  transform: translateY(-1px) !important;
 }
 
-.variant-selector button.variant-card:hover {
-  border-color: #d46925;
-  background: #fffaf5;
-  transform: translateY(-1px);
-}
-
-.variant-selector button.variant-card:active {
-  transform: translateY(0);
-}
-
-/* ACTIVE CARD */
-
-.variant-selector button.variant-card.variant-card-active {
+button.variant-card-active {
   background: #fff0e4 !important;
   border: 2px solid #d46925 !important;
-
   box-shadow: none !important;
 }
 
+button.variant-card-active:hover {
+  background: #ffede0 !important;
+}
+
 .variant-card-title {
-  display: block;
-  margin: 0 0 8px;
+  display: block !important;
 
-  font-size: 15px;
-  line-height: 1.2;
-  font-weight: 700;
+  margin: 0 0 8px !important;
 
-  color: #24231f;
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+  font-weight: 700 !important;
+
+  color: #24231f !important;
 }
 
 .variant-card-active .variant-card-title {
-  color: #d46925;
+  color: #d46925 !important;
 }
 
 .variant-card-summary {
-  display: block;
+  display: block !important;
 
-  font-size: 12px;
-  line-height: 1.45;
+  margin: 0 !important;
 
-  color: #77736c;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+
+  color: #77736c !important;
 }
 
 .variant-card-active .variant-card-summary {
-  color: #665143;
+  color: #665143 !important;
 }
 
-/* ADD VARIANT */
+/* Добавить вариант */
 
-.variant-selector button.variant-add {
-  display: flex;
+button.variant-add {
+  all: unset;
 
-  align-items: center;
-  justify-content: center;
+  display: flex !important;
 
-  text-align: center;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 94px !important;
 
-  border: 1px dashed #c9c2b8;
-  background: #fff;
+  box-sizing: border-box !important;
 
-  color: #77736c;
+  padding: 16px !important;
 
-  font-weight: 600;
+  border: 1px dashed #c9c2b8 !important;
+  border-radius: 14px !important;
+
+  background: #fff !important;
+  color: #77736c !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  text-align: center !important;
+
+  cursor: pointer !important;
+
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease !important;
 }
 
-.variant-selector button.variant-add:hover {
-  border-color: #d46925;
-  background: #fffaf5;
-  color: #d46925;
+button.variant-add:hover {
+  background: #fffaf5 !important;
+  border-color: #d46925 !important;
+  color: #d46925 !important;
 }
 
-/* =========================================================
-   VARIANT EDITOR
-   ========================================================= */
+/* EDITOR */
 
 .variant-editor {
   border-top: 1px solid #e7e2d9;
@@ -326,33 +326,28 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   gap: 20px;
-
   margin-bottom: 27px;
 }
 
 .variant-editor-header h3 {
   margin: 0;
-
   font-size: 21px;
   line-height: 1.2;
 }
 
 .variant-editor-header p {
   margin: 7px 0 0;
-
   color: #88837a;
   font-size: 13px;
 }
 
-.variant-remove {
+button.variant-remove {
   appearance: none;
   -webkit-appearance: none;
 
   border: 1px solid #ddd8ce;
   background: #fff;
-
   color: #77736c;
 
   border-radius: 9px;
@@ -363,30 +358,20 @@ main {
 
   font-size: 12px;
   font-weight: 500;
-
-  transition:
-    border-color 0.15s ease,
-    color 0.15s ease,
-    background 0.15s ease;
 }
 
-.variant-remove:hover {
+button.variant-remove:hover {
   border-color: #b43c27;
   color: #b43c27;
   background: #fff8f6;
 }
 
-/* =========================================================
-   COLOR MODE
-   ========================================================= */
+/* COLOR MODE */
 
 .color-mode {
   display: grid;
-
   grid-template-columns: 1fr 1fr;
-
   gap: 12px;
-
   margin-bottom: 27px;
 }
 
@@ -419,25 +404,20 @@ main {
 
 .color-mode-option strong {
   display: block;
-
   font-size: 14px;
   font-weight: 700;
 }
 
 .color-mode-option span {
   display: block;
-
   margin-top: 6px;
-
   color: #88837a;
-
   font-size: 12px;
   line-height: 1.4;
 }
 
 .color-mode-active {
   background: #fff0e4 !important;
-
   border: 2px solid #d46925 !important;
 }
 
@@ -445,27 +425,18 @@ main {
   color: #d46925;
 }
 
-.color-mode-active span {
-  color: #6e5747;
-}
-
-/* =========================================================
-   INDIVIDUAL COLORS
-   ========================================================= */
+/* INDIVIDUAL COLORS */
 
 .individual-colors {
   display: flex;
   flex-direction: column;
-
   gap: 16px;
 }
 
 .individual-color-card {
   border: 1px solid #e3ded5;
   border-radius: 14px;
-
   padding: 20px;
-
   background: #faf9f6;
 }
 
@@ -481,7 +452,6 @@ main {
   width: 100%;
 
   border: 0;
-
   padding: 0 0 17px;
   margin: 0 0 20px;
 
@@ -496,24 +466,18 @@ main {
 
 .individual-color-header strong {
   display: block;
-
   font-size: 16px;
   font-weight: 700;
 }
 
 .individual-color-header span {
   display: block;
-
   margin-top: 5px;
-
   color: #88837a;
-
   font-size: 12px;
 }
 
-/* =========================================================
-   GENERATE
-   ========================================================= */
+/* GENERATE */
 
 .generate {
   appearance: none;
@@ -522,7 +486,6 @@ main {
   width: 100%;
 
   border: 0;
-
   border-radius: 11px;
 
   padding: 17px;
@@ -545,18 +508,12 @@ main {
   background: #d46925;
 }
 
-.generate:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
 .generate:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-/* =========================================================
-   LOADING
-   ========================================================= */
+/* LOADING */
 
 .loading {
   min-height: 230px;
@@ -592,9 +549,7 @@ main {
 
 .loading span {
   margin-top: 8px;
-
   color: #88837a;
-
   font-size: 13px;
 }
 
@@ -604,27 +559,18 @@ main {
   }
 }
 
-/* =========================================================
-   ERROR
-   ========================================================= */
+/* ERROR */
 
 .error {
   margin: 14px 0 0;
-
   padding: 12px;
-
   border-radius: 8px;
-
   background: #fff0ed;
-
   color: #b43c27;
-
   font-size: 13px;
 }
 
-/* =========================================================
-   RESULTS
-   ========================================================= */
+/* RESULTS */
 
 .results {
   margin-top: 20px;
@@ -632,17 +578,13 @@ main {
 
 .results-description {
   margin: -12px 0 22px;
-
   color: #88837a;
-
   font-size: 13px;
 }
 
 .results-grid {
   display: grid;
-
   grid-template-columns: repeat(3, minmax(0, 1fr));
-
   gap: 16px;
 }
 
@@ -653,23 +595,17 @@ main {
 .result-number {
   font-size: 13px;
   font-weight: 700;
-
   margin-bottom: 10px;
 }
 
 .result img {
   width: 100%;
-
   display: block;
-
   border-radius: 12px;
-
   background: #f3f1ed;
 }
 
-/* =========================================================
-   MOBILE
-   ========================================================= */
+/* MOBILE */
 
 @media (max-width: 800px) {
   main {
