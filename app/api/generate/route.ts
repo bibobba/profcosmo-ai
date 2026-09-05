@@ -239,12 +239,12 @@ MALE CLASSIC HAIRCUT:
     case "crop":
       formDescription = `
 MALE CROP:
-- Clearly recognizable men's crop haircut.
+- Clearly recognizable professional men's crop haircut.
 - Short sides and back.
 - Compact top.
 - Short textured top.
-- Forward-oriented fringe/top.
-- Strong compact silhouette.
+- Forward-oriented compact fringe/top.
+- Strong compact masculine silhouette.
 - Do not create long hair.
 - Do not create a pompadour.
 - Do not create an undercut.
@@ -256,7 +256,7 @@ MALE CROP:
 MALE FADE:
 - Clearly recognizable professional fade haircut.
 - Sides and back progressively transition from very short near the lower area to longer hair toward the top.
-- The transition must be visibly gradual and blended.
+- The transition must be visibly gradual and blended across the sides and back.
 - Top remains clearly longer than the faded sides.
 - Clean professional barber geometry.
 - Do not make the entire haircut uniformly short.
@@ -267,14 +267,17 @@ MALE FADE:
     case "taper":
       formDescription = `
 MALE TAPER:
-- Professional taper haircut.
-- Gradual reduction of length around temples and neckline.
-- The transition is concentrated around the edges.
-- More hair remains on the sides than in a skin fade.
-- Top remains clearly longer.
-- Natural masculine silhouette.
-- Do not turn it into a full skin fade.
-- Do not create an undercut.
+- Clearly recognizable professional men's taper haircut.
+- The main taper is concentrated around the temples, sideburns and neckline.
+- The sides are NOT fully faded from bottom to top.
+- Keep significantly more hair on the side panels than in a traditional full fade.
+- The transition should remain subtle and controlled outside the edge areas.
+- The top remains clearly longer than the sides.
+- Preserve a natural masculine silhouette.
+- Do NOT turn this into a standard Fade.
+- Do NOT create a full skin fade across the entire side.
+- Do NOT shave the entire side panel down to skin.
+- Do NOT create an undercut.
 `;
       break;
 
@@ -301,7 +304,7 @@ MALE TEXTURED HAIRCUT:
 - Visible texture and separation between strands.
 - Natural irregularity on the top.
 - Short-to-medium masculine sides.
-- Controlled texture, not messy random hair.
+- Controlled texture, not random messy hair.
 - No long feminine silhouette.
 - No undercut unless explicitly requested.
 `;
@@ -333,7 +336,7 @@ Professional men's haircut with a natural masculine silhouette.
   switch (temples) {
     case "slanted":
       templesDescription = `
-TEMPLES:
+TEMPLE DESIGN:
 - Slanted men's temple shape.
 - The temple line should visibly angle naturally.
 `;
@@ -341,7 +344,7 @@ TEMPLES:
 
     case "straight":
       templesDescription = `
-TEMPLES:
+TEMPLE DESIGN:
 - Straight men's temple shape.
 - Clean vertical/straight temple line.
 `;
@@ -349,11 +352,13 @@ TEMPLES:
 
     case "skin-fade":
       templesDescription = `
-TEMPLES:
-- Skin fade at the temples.
-- Very short to skin-level transition around the temple area.
-- Clean professional barber finish.
-- Clearly visible fade around the temples.
+TEMPLE DESIGN — SKIN FADE:
+- Apply a skin-level fade specifically around the temple and sideburn area.
+- The temple area may reach skin level.
+- Keep the skin fade localized to the temple/sideburn zone.
+- Do NOT automatically extend the skin fade across the entire side panel.
+- If the selected haircut is TAPER, preserve the TAPER structure everywhere outside the temple/sideburn zone.
+- If the selected haircut is FADE, integrate the skin fade naturally into the overall fade.
 `;
       break;
 
@@ -493,55 +498,46 @@ COLOR:
     case "solid":
       techniqueDescription =
         "uniform solid color throughout the hair";
-
       break;
 
     case "highlighting":
       techniqueDescription =
         "professional highlighting with lighter selected strands";
-
       break;
 
     case "balayage":
       techniqueDescription =
         "professional balayage with hand-painted dimensional lightening";
-
       break;
 
     case "shatush":
       techniqueDescription =
         "professional shatush with soft natural-looking lightening";
-
       break;
 
     case "airtouch":
       techniqueDescription =
         "professional AirTouch-style dimensional lightening";
-
       break;
 
     case "ombre":
       techniqueDescription =
         "professional ombre with a controlled transition from darker roots to lighter lengths";
-
       break;
 
     case "toning":
       techniqueDescription =
         "professional toning applied consistently to the existing hair";
-
       break;
 
     case "gray-camouflage":
       techniqueDescription =
         "professional gray camouflage with natural-looking coverage";
-
       break;
 
     case "blond":
       techniqueDescription =
-        "professional blonde result at the selected tone level";
-
+        "professional blonde transformation with controlled lightening to the selected level followed by the selected tonal direction";
       break;
 
     default:
@@ -552,12 +548,35 @@ COLOR:
   return `
 COLOR:
 - Coloring technique: ${techniqueDescription}.
-- Tone level: ${tone} — ${toneDescription[tone] || "selected tone"}.
-- Shade: ${shadeDescription[shade] || "selected shade"}.
+- Tone level: ${tone} — ${
+    toneDescription[tone] ||
+    "selected tone"
+  }.
+- Shade: ${
+    shadeDescription[shade] ||
+    "selected shade"
+  }.
 - The selected tone and shade must be visibly reflected in the hair.
 - Keep the color realistic and professionally achievable.
 - Do not change skin tone.
 - Do not change eyebrows unless absolutely necessary for a realistic result.
+
+${
+  coloring === "blond"
+    ? `
+BLOND MODE:
+- This is a blonde transformation, not simply a color filter.
+- Hair must visibly become blonde at the selected level.
+- If the selected level is 7, produce a medium blonde.
+- If the selected level is 8, produce a light blonde.
+- If the selected level is 9, produce a very light blonde.
+- If the selected level is 10, produce an extremely light blonde.
+- The selected shade controls the tonal direction after lightening.
+- Do not leave the hair dark brown.
+- Do not interpret the selected blonde level as the original hair color.
+`
+    : ""
+}
 `;
 }
 
@@ -658,12 +677,32 @@ ${getMaleFormDescription(
   temples
 )}
 
+MALE PARAMETER PRIORITY:
+1. Selected male haircut form.
+2. Selected temple design.
+3. Selected length, when applicable.
+4. Selected hair structure.
+5. Selected color.
+
+The haircut form and temple design must work together.
+Do not allow one parameter to erase another.
+
+IMPORTANT TAPER RULE:
+If the form is TAPER and the temple design is SKIN FADE:
+- Keep the overall haircut a TAPER.
+- Keep the skin fade localized around the temples and sideburns.
+- Do NOT convert the whole side into a full FADE.
+- Do NOT create a high skin fade across the entire side and back.
+- The side panels should retain visible hair and taper gradually.
+- The result must visually differ from a standard FADE.
+
 MALE HAIRSTYLE RULES:
 - The result must remain clearly masculine.
 - Do not create feminine long-hair styling.
-- Do not add bangs as a separate women's hairstyle.
-- Do not introduce a side part unless it naturally belongs to the selected male form.
-- Do not invent volume or styling requirements that were not selected.
+- Do not add a women's fringe/bangs configuration.
+- Do not introduce a dramatic side part unless it naturally belongs to the selected male form.
+- Do not invent styling requirements that were not selected.
+- Do not change the person's clothing or pose.
 
 ${colorDescription}
 
@@ -679,6 +718,7 @@ Before producing the image, verify:
 8. If coloring is not "none", correct tone ${colorDepth} and shade ${colorShade}.
 9. No unrelated hairstyle.
 10. No chest-length or waist-length hair unless explicitly requested by the selected parameters.
+11. If TAPER + SKIN FADE is selected, the result must NOT become a full FADE.
 `;
   }
 
@@ -1065,16 +1105,6 @@ export async function POST(
           { status: 400 }
         );
       }
-
-      if (
-        maleForm !==
-          "undercut" &&
-        maleForm !==
-          "elongated"
-      ) {
-        // Для остальных мужских форм
-        // длина не используется.
-      }
     }
 
     if (
@@ -1093,8 +1123,6 @@ export async function POST(
       );
     }
 
-    // Если окрашивания нет,
-    // цветовые параметры не требуются.
     if (coloring !== "none") {
       if (
         !isValid(
@@ -1127,6 +1155,20 @@ export async function POST(
           { status: 400 }
         );
       }
+
+      if (
+        coloring === "blond" &&
+        Number(colorDepth) < 7
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Для режима «Блонд» уровень тона должен быть от 7 до 10.",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const prompt =
@@ -1150,13 +1192,10 @@ export async function POST(
     /*
      * Пока генерируем один результат.
      *
-     * Это намеренно:
-     * текущий endpoint возвращает base64,
-     * поэтому 3 больших изображения могут
-     * превысить лимит ответа Vercel.
-     *
-     * Три варианта вернём после подключения
-     * нормального хранения изображений.
+     * Три результата подключим после
+     * решения вопроса с хранением изображений,
+     * чтобы не возвращать несколько больших
+     * base64-файлов через Vercel.
      */
 
     const openAIForm =
@@ -1271,12 +1310,13 @@ export async function POST(
       );
     }
 
+    const imageUrl =
+      `data:image/jpeg;base64,${base64Image}`;
+
     return NextResponse.json({
       success: true,
-      imageUrl: `data:image/jpeg;base64,${base64Image}`,
-      imageUrls: [
-        `data:image/jpeg;base64,${base64Image}`,
-      ],
+      imageUrl,
+      imageUrls: [imageUrl],
     });
   } catch (error) {
     console.error(
