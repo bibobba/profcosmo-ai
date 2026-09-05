@@ -808,17 +808,18 @@ async function createSignedBlobUrl(
     });
 
   const signed =
-    await presignUrl(
-      token,
-      {
-        pathname:
-          blob.pathname,
-        operation: "get",
-        validUntil:
-          Date.now() +
-          24 * 60 * 60 * 1000,
-      }
-    );
+  await presignUrl(
+    token,
+    {
+      pathname:
+        blob.pathname,
+      operation: "get",
+      access: "private",
+      validUntil:
+        Date.now() +
+        24 * 60 * 60 * 1000,
+    }
+  );
 
   return signed.presignedUrl;
 }
