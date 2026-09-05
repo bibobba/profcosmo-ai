@@ -314,6 +314,7 @@ MALE TAPER:
 - Do NOT create a full skin fade across the entire side.
 - Do NOT shave the entire side panel down to skin.
 - Do NOT create an undercut.
+- The visual silhouette must remain recognizably different from a full FADE.
 `;
       break;
 
@@ -324,10 +325,12 @@ MALE UNDERCUT:
 - The sides and back are significantly shorter than the top.
 - Strong visible disconnection between the short sides/back and longer top.
 - The top must remain substantially longer than the sides.
-- The long section is concentrated on the top and upper back.
+- The long section is concentrated on the top and upper back, following a masculine undercut structure.
 - Do NOT turn the hairstyle into generic long hair.
 - Do NOT create hair hanging to the chest or waist.
 - Do NOT make it look feminine.
+- Even when the selected length is "long", keep the result recognizably masculine and undercut-shaped.
+- Preserve a strong disconnected undercut silhouette.
 `;
       break;
 
@@ -348,12 +351,14 @@ MALE TEXTURED HAIRCUT:
       formDescription = `
 MALE ELONGATED HAIRCUT:
 - Clearly recognizable elongated men's haircut.
-- Medium or longer masculine top and sides.
-- Hair may extend toward the shoulders if the selected length requires it.
-- Preserve a masculine silhouette.
-- Do not create feminine long-hair styling.
-- Do not create waist-length hair.
-- Do not create a disconnected undercut unless explicitly selected.
+- Longer top and back while maintaining a masculine men's haircut structure.
+- The hair should look intentionally grown out and elongated.
+- Preserve masculine proportions around the face and temples.
+- The selected length must visibly affect the overall silhouette.
+- "Long" means approximately shoulder-length or slightly below at maximum.
+- NEVER create waist-length hair.
+- NEVER create hair extending dramatically onto the chest.
+- NEVER turn the result into a feminine long hairstyle.
 `;
       break;
 
@@ -382,10 +387,13 @@ TEMPLE DESIGN:
 
         case "skin-fade":
           return `
-TEMPLE DESIGN:
-- Skin fade localized around the temples and sideburns.
-- Fade to skin only in the temple/sideburn zone.
-- Do not automatically turn the entire side and back into a skin fade.
+TEMPLE DESIGN — SKIN FADE:
+- Apply a skin-level fade specifically around the temple and sideburn area.
+- The temple area may reach skin level.
+- Keep the skin fade localized to the temple/sideburn zone.
+- Do NOT automatically extend the skin fade across the entire side panel.
+- If the selected haircut is TAPER, preserve the TAPER structure everywhere outside the temple/sideburn zone.
+- If the selected haircut is FADE, integrate the skin fade naturally into the overall fade.
 `;
 
         default:
@@ -662,6 +670,10 @@ function buildPrompt(params: {
 TASK:
 Edit the provided person's photograph and change ONLY the hairstyle and hair color according to the selected professional parameters.
 
+SOURCE IMAGE:
+- Treat the uploaded photograph as the primary identity and composition reference.
+- Perform a targeted hairstyle/hair-color edit rather than recreating a different person or scene.
+
 IDENTITY PRESERVATION:
 - Keep exactly the same person.
 - Preserve facial identity.
@@ -682,6 +694,8 @@ HAIR EDITING:
 - The haircut must have professional barber/stylist geometry.
 - Do not add hair to the face.
 - Do not modify the ears, forehead or facial features except where naturally covered by the new hairstyle.
+- Preserve realistic hairline and natural density.
+- Do not redraw the entire head or face when a localized hair edit is sufficient.
 
 HARD CONSTRAINTS:
 - The selected haircut form is mandatory.
@@ -747,6 +761,7 @@ MALE HAIRSTYLE RULES:
 - Do not add women's bangs configuration.
 - Do not invent a dramatic side part.
 - Do not invent styling requirements that were not selected.
+- Do not change the person's clothing or pose.
 
 ${colorDescription}
 
@@ -1121,7 +1136,7 @@ async function generateOneVariant(params: {
 
   openAIForm.append(
     "output_compression",
-    "90"
+    "95"
   );
 
   const response =
