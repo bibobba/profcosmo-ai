@@ -24,7 +24,7 @@ const structures: Option[] = [
 
 const femaleForms: Option[] = [
   { value: "ai", label: "AI-подбор" },
-  { value: "blunt", label: "Прямой срез" },
+  { value: "straight-cut", label: "Прямой срез" },
   { value: "graduated", label: "Градуированная" },
   { value: "layers", label: "Слои" },
   { value: "cascade", label: "Каскадная" },
@@ -98,10 +98,13 @@ const coloringTechniques: Option[] = [
   { value: "blond", label: "Блонд" },
 ];
 
-const toneLevels = Array.from({ length: 10 }, (_, i) => ({
-  value: String(i + 1),
-  label: `${i + 1} тон`,
-}));
+const toneLevels: Option[] = Array.from(
+  { length: 10 },
+  (_, i) => ({
+    value: String(i + 1),
+    label: `${i + 1} тон`,
+  })
+);
 
 const shadesByTone: Record<string, Option[]> = {
   "1": [
@@ -211,7 +214,7 @@ export default function Home() {
 
   const [femaleForm, setFemaleForm] = useState("ai");
   const [femaleBang, setFemaleBang] = useState("none");
-  const [femaleParting, setFemaleParting] = useState("none");
+  const [femaleParting, setFemaleParting] = useState("center");
   const [femaleVolume, setFemaleVolume] = useState("natural");
   const [femaleStyling, setFemaleStyling] = useState("natural");
   const [femaleEnds, setFemaleEnds] = useState("straight");
@@ -249,7 +252,7 @@ export default function Home() {
     if (nextGender === "female") {
       setFemaleForm("ai");
       setFemaleBang("none");
-      setFemaleParting("none");
+      setFemaleParting("center");
       setFemaleVolume("natural");
       setFemaleStyling("natural");
       setFemaleEnds("straight");
@@ -293,7 +296,7 @@ export default function Home() {
       formData.append("structure", structure);
 
       if (gender === "female") {
-        formData.append("femaleForm", femaleForm);
+        formData.append("haircutForm", femaleForm);
         formData.append("bangs", femaleBang);
         formData.append("parting", femaleParting);
         formData.append("volume", femaleVolume);
@@ -303,10 +306,10 @@ export default function Home() {
         formData.append("maleForm", "");
         formData.append("temples", "");
       } else {
+        formData.append("haircutForm", "");
         formData.append("maleForm", maleForm);
         formData.append("temples", maleTemples);
 
-        formData.append("femaleForm", "");
         formData.append("bangs", "");
         formData.append("parting", "");
         formData.append("volume", "");
@@ -318,19 +321,27 @@ export default function Home() {
       formData.append("colorShade", colorShade);
       formData.append("coloring", coloring);
 
-      // Пока тестируем один вариант.
-      formData.append("variants", "1");
+      formData.append("variants", "3");
 
       const response = await fetch("/api/generate", {
         method: "POST",
         body: formData,
       });
 
-      const data = await response.json();
+      let data: any = null;
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(
+          `Сервер вернул некорректный ответ. Код: ${response.status}`
+        );
+      }
 
       if (!response.ok || !data.success) {
         throw new Error(
-          data.error || "Не удалось создать вариант прически."
+          data.error ||
+            `Не удалось создать варианты прически. Код: ${response.status}`
         );
       }
 
@@ -341,7 +352,7 @@ export default function Home() {
         : [];
 
       if (!images.length) {
-        throw new Error("AI не вернул изображение.");
+        throw new Error("AI не вернул изображения.");
       }
 
       setResultImages(images);
@@ -471,7 +482,16 @@ export default function Home() {
                 title="Форма"
                 options={maleForms}
                 value={maleForm}
-                onChange={setMaleForm}
+                onChange={(value) => {
+                  setMaleForm(value);
+
+                  if (
+                    value !== "undercut" &&
+                    value !== "elongated"
+                  ) {
+                    setLength("short");
+                  }
+                }}
               />
 
               {(maleForm === "undercut" ||
@@ -532,13 +552,11 @@ export default function Home() {
             onClick={generate}
           >
             {loading
-              ? "Создаём вариант..."
+              ? "Создаём варианты..."
               : "Подобрать прическу"}
           </button>
 
-          {error && (
-            <p className="error">{error}</p>
-          )}
+          {error && <p className="error">{error}</p>}
         </section>
 
         {resultImages.length > 0 && (
@@ -546,7 +564,7 @@ export default function Home() {
             <h2>Варианты</h2>
 
             <p className="results-description">
-              Вариант на основе выбранных параметров.
+              Несколько вариантов на основе выбранных параметров.
             </p>
 
             <div className="results-grid">
