@@ -403,20 +403,39 @@ function buildPrompt(
     variant.maleForm
   );
 
-  const structure = getStructureDescription(variant.structure);
+  const structure = getStructureDescription(
+    variant.structure
+  );
 
-  const colorDescription = getColorDescription(color, gender);
+  const colorDescription = getColorDescription(
+    color,
+    gender
+  );
 
   if (gender === "female") {
     const form = getFemaleFormDescription(
       normalizeFemaleForm(variant.femaleForm)
     );
 
-    const bangs = getBangDescription(variant.femaleBang);
-    const parting = getPartingDescription(variant.femaleParting);
-    const volume = getVolumeDescription(variant.femaleVolume);
-    const styling = getStylingDescription(variant.femaleStyling);
-    const ends = getEndsDescription(variant.femaleEnds);
+    const bangs = getBangDescription(
+      variant.femaleBang
+    );
+
+    const parting = getPartingDescription(
+      variant.femaleParting
+    );
+
+    const volume = getVolumeDescription(
+      variant.femaleVolume
+    );
+
+    const styling = getStylingDescription(
+      variant.femaleStyling
+    );
+
+    const ends = getEndsDescription(
+      variant.femaleEnds
+    );
 
     return `
 Edit the provided person's photo.
@@ -457,8 +476,13 @@ Professional salon-quality result.
 `.trim();
   }
 
-  const form = getMaleFormDescription(variant.maleForm);
-  const temples = getTemplesDescription(variant.maleTemples);
+  const form = getMaleFormDescription(
+    variant.maleForm
+  );
+
+  const temples = getTemplesDescription(
+    variant.maleTemples
+  );
 
   return `
 Edit the provided person's photo.
@@ -499,17 +523,23 @@ async function createSignedBlobUrl(
 ): Promise<string> {
   const token = await issueSignedToken({
     pathname,
-    onRequest: {
-      method: "GET",
-    },
+    operations: ["get"],
+    validUntil:
+      Date.now() + 24 * 60 * 60 * 1000,
   });
 
-  return presignUrl(token, {
-    pathname,
-    operation: "download",
-    access: "private",
-    validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
-  });
+  const { presignedUrl } = await presignUrl(
+    token,
+    {
+      pathname,
+      operation: "get",
+      access: "private",
+      validUntil:
+        Date.now() + 24 * 60 * 60 * 1000,
+    }
+  );
+
+  return presignedUrl;
 }
 
 async function generateOneVariant(
@@ -520,93 +550,165 @@ async function generateOneVariant(
   const openaiKey = process.env.OPENAI_API_KEY;
 
   if (!openaiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+    throw new Error(
+      "OPENAI_API_KEY is not configured"
+    );
   }
 
   const formData = new FormData();
 
-  formData.append("model", "gpt-image-2");
-  formData.append("prompt", prompt);
-  formData.append("size", "1024x1536");
-  formData.append("quality", "high");
-  formData.append("output_format", "jpeg");
-  formData.append("output_compression", "85");
-  formData.append("image", imageFile);
+  formData.append(
+    "model",
+    "gpt-image-2"
+  );
 
-  const response = await fetch(OPENAI_EDIT_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${openaiKey}`,
-    },
-    body: formData,
-  });
+  formData.append(
+    "prompt",
+    prompt
+  );
+
+  formData.append(
+    "size",
+    "1024x1536"
+  );
+
+  formData.append(
+    "quality",
+    "high"
+  );
+
+  formData.append(
+    "output_format",
+    "jpeg"
+  );
+
+  formData.append(
+    "output_compression",
+    "85"
+  );
+
+  formData.append(
+    "image",
+    imageFile
+  );
+
+  const response = await fetch(
+    OPENAI_EDIT_URL,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openaiKey}`,
+      },
+      body: formData,
+    }
+  );
 
   if (!response.ok) {
-    const errorText = await response.text();
+    const errorText =
+      await response.text();
 
     throw new Error(
-      `OpenAI error for variant ${index + 1}: ${response.status} ${errorText}`
+      `OpenAI error for variant ${
+        index + 1
+      }: ${response.status} ${errorText}`
     );
   }
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
-  const imageBase64 = data?.data?.[0]?.b64_json;
+  const imageBase64 =
+    data?.data?.[0]?.b64_json;
 
   if (!imageBase64) {
     throw new Error(
-      `OpenAI returned no image for variant ${index + 1}`
+      `OpenAI returned no image for variant ${
+        index + 1
+      }`
     );
   }
 
-  const imageBuffer = Buffer.from(imageBase64, "base64");
+  const imageBuffer =
+    Buffer.from(
+      imageBase64,
+      "base64"
+    );
 
   const blob = await put(
-    `generated/variant-${Date.now()}-${index + 1}.jpg`,
+    `generated/variant-${Date.now()}-${
+      index + 1
+    }.jpg`,
     imageBuffer,
     {
       access: "private",
       contentType: "image/jpeg",
       addRandomSuffix: true,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token:
+        process.env
+          .BLOB_READ_WRITE_TOKEN,
     }
   );
 
-  return createSignedBlobUrl(blob.pathname);
+  return createSignedBlobUrl(
+    blob.pathname
+  );
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request
+) {
   try {
-    const formData = await request.formData();
+    const formData =
+      await request.formData();
 
-    const image = formData.get("image");
+    const image =
+      formData.get("image");
 
     if (!(image instanceof File)) {
       return NextResponse.json(
-        { error: "Фотография не загружена" },
+        {
+          error:
+            "Фотография не загружена",
+        },
         { status: 400 }
       );
     }
 
-    const genderValue = formData.get("gender");
+    const genderValue =
+      formData.get("gender");
 
     if (
-      typeof genderValue !== "string" ||
-      !isAllowed(genderValue, ALLOWED_GENDERS)
+      typeof genderValue !==
+        "string" ||
+      !isAllowed(
+        genderValue,
+        ALLOWED_GENDERS
+      )
     ) {
       return NextResponse.json(
-        { error: "Некорректно указан пол" },
+        {
+          error:
+            "Некорректно указан пол",
+        },
         { status: 400 }
       );
     }
 
-    const gender = genderValue as Gender;
+    const gender =
+      genderValue as Gender;
 
-    const rawVariants = formData.get("variants");
+    const rawVariants =
+      formData.get("variants");
 
-    if (typeof rawVariants !== "string") {
+    if (
+      typeof rawVariants !==
+      "string"
+    ) {
       return NextResponse.json(
-        { error: "Параметры вариантов не переданы" },
+        {
+          error:
+            "Параметры вариантов не переданы",
+        },
         { status: 400 }
       );
     }
@@ -614,10 +716,14 @@ export async function POST(request: Request) {
     let variants: Variant[];
 
     try {
-      variants = JSON.parse(rawVariants);
+      variants =
+        JSON.parse(rawVariants);
     } catch {
       return NextResponse.json(
-        { error: "Некорректный формат вариантов" },
+        {
+          error:
+            "Некорректный формат вариантов",
+        },
         { status: 400 }
       );
     }
@@ -629,59 +735,96 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error: "Количество вариантов должно быть от 1 до 3",
+          error:
+            "Количество вариантов должно быть от 1 до 3",
         },
         { status: 400 }
       );
     }
 
-    const colorModeValue = formData.get("colorMode");
+    const colorModeValue =
+      formData.get("colorMode");
 
     if (
-      colorModeValue !== "shared" &&
-      colorModeValue !== "individual"
+      colorModeValue !==
+        "shared" &&
+      colorModeValue !==
+        "individual"
     ) {
       return NextResponse.json(
-        { error: "Некорректный режим цвета" },
+        {
+          error:
+            "Некорректный режим цвета",
+        },
         { status: 400 }
       );
     }
 
     const colorMode =
-      colorModeValue as "shared" | "individual";
+      colorModeValue as
+        | "shared"
+        | "individual";
 
-    const sharedColor: ColorSettings = {
-      colorDepth: String(
-        formData.get("sharedColorDepth") || "5"
-      ),
-      colorShade: String(
-        formData.get("sharedColorShade") || "natural"
-      ),
-      coloring: String(
-        formData.get("sharedColoring") || "none"
-      ),
-    };
+    const sharedColor: ColorSettings =
+      {
+        colorDepth: String(
+          formData.get(
+            "sharedColorDepth"
+          ) || "5"
+        ),
+
+        colorShade: String(
+          formData.get(
+            "sharedColorShade"
+          ) || "natural"
+        ),
+
+        coloring: String(
+          formData.get(
+            "sharedColoring"
+          ) || "none"
+        ),
+      };
 
     if (
-      !isAllowed(sharedColor.colorDepth, COLOR_DEPTHS) ||
-      !isAllowed(sharedColor.colorShade, COLOR_SHADES) ||
-      !isAllowed(sharedColor.coloring, COLORING)
+      !isAllowed(
+        sharedColor.colorDepth,
+        COLOR_DEPTHS
+      ) ||
+      !isAllowed(
+        sharedColor.colorShade,
+        COLOR_SHADES
+      ) ||
+      !isAllowed(
+        sharedColor.coloring,
+        COLORING
+      )
     ) {
       return NextResponse.json(
         {
-          error: "Некорректные общие параметры цвета",
+          error:
+            "Некорректные общие параметры цвета",
         },
         { status: 400 }
       );
     }
 
-    let individualColors: ColorSettings[] = [];
+    let individualColors:
+      ColorSettings[] = [];
 
-    if (colorMode === "individual") {
+    if (
+      colorMode ===
+      "individual"
+    ) {
       const rawIndividualColors =
-        formData.get("individualColors");
+        formData.get(
+          "individualColors"
+        );
 
-      if (typeof rawIndividualColors !== "string") {
+      if (
+        typeof rawIndividualColors !==
+        "string"
+      ) {
         return NextResponse.json(
           {
             error:
@@ -692,9 +835,10 @@ export async function POST(request: Request) {
       }
 
       try {
-        individualColors = JSON.parse(
-          rawIndividualColors
-        );
+        individualColors =
+          JSON.parse(
+            rawIndividualColors
+          );
       } catch {
         return NextResponse.json(
           {
@@ -706,8 +850,11 @@ export async function POST(request: Request) {
       }
 
       if (
-        !Array.isArray(individualColors) ||
-        individualColors.length !== variants.length
+        !Array.isArray(
+          individualColors
+        ) ||
+        individualColors.length !==
+          variants.length
       ) {
         return NextResponse.json(
           {
@@ -722,15 +869,21 @@ export async function POST(request: Request) {
         if (
           !color ||
           !isAllowed(
-            String(color.colorDepth),
+            String(
+              color.colorDepth
+            ),
             COLOR_DEPTHS
           ) ||
           !isAllowed(
-            String(color.colorShade),
+            String(
+              color.colorShade
+            ),
             COLOR_SHADES
           ) ||
           !isAllowed(
-            String(color.coloring),
+            String(
+              color.coloring
+            ),
             COLORING
           )
         ) {
@@ -744,55 +897,78 @@ export async function POST(request: Request) {
         }
       }
     } else {
-      individualColors = variants.map(() => sharedColor);
+      individualColors =
+        variants.map(
+          () => sharedColor
+        );
     }
 
     for (const variant of variants) {
       if (
-        typeof variant !== "object" ||
+        typeof variant !==
+          "object" ||
         !isAllowed(
-          String(variant.structure),
+          String(
+            variant.structure
+          ),
           STRUCTURES
         )
       ) {
         return NextResponse.json(
           {
-            error: "Некорректная структура волос",
+            error:
+              "Некорректная структура волос",
           },
           { status: 400 }
         );
       }
 
-      if (gender === "female") {
+      if (
+        gender === "female"
+      ) {
         if (
           !isAllowed(
-            String(variant.length),
+            String(
+              variant.length
+            ),
             FEMALE_LENGTHS
           ) ||
           !isAllowed(
             normalizeFemaleForm(
-              String(variant.femaleForm)
+              String(
+                variant.femaleForm
+              )
             ),
             FEMALE_FORMS
           ) ||
           !isAllowed(
-            String(variant.femaleBang),
+            String(
+              variant.femaleBang
+            ),
             FEMALE_BANGS
           ) ||
           !isAllowed(
-            String(variant.femaleParting),
+            String(
+              variant.femaleParting
+            ),
             FEMALE_PARTINGS
           ) ||
           !isAllowed(
-            String(variant.femaleVolume),
+            String(
+              variant.femaleVolume
+            ),
             FEMALE_VOLUMES
           ) ||
           !isAllowed(
-            String(variant.femaleStyling),
+            String(
+              variant.femaleStyling
+            ),
             FEMALE_STYLINGS
           ) ||
           !isAllowed(
-            String(variant.femaleEnds),
+            String(
+              variant.femaleEnds
+            ),
             FEMALE_ENDS
           )
         ) {
@@ -806,14 +982,20 @@ export async function POST(request: Request) {
         }
       }
 
-      if (gender === "male") {
+      if (
+        gender === "male"
+      ) {
         if (
           !isAllowed(
-            String(variant.maleForm),
+            String(
+              variant.maleForm
+            ),
             MALE_FORMS
           ) ||
           !isAllowed(
-            String(variant.maleTemples),
+            String(
+              variant.maleTemples
+            ),
             MALE_TEMPLES
           )
         ) {
@@ -827,39 +1009,58 @@ export async function POST(request: Request) {
         }
 
         if (
-          variant.maleForm !== "undercut" &&
-          variant.maleForm !== "elongated"
+          variant.maleForm !==
+            "undercut" &&
+          variant.maleForm !==
+            "elongated"
         ) {
-          variant.length = "short";
+          variant.length =
+            "short";
         }
       }
     }
 
-    const prompts = variants.map((variant, index) =>
-      buildPrompt(
-        gender,
-        variant,
-        individualColors[index]
-      )
-    );
-
-    const results = await Promise.all(
-      prompts.map((prompt, index) =>
-        generateOneVariant(
-          image,
-          prompt,
+    const prompts =
+      variants.map(
+        (
+          variant,
           index
+        ) =>
+          buildPrompt(
+            gender,
+            variant,
+            individualColors[
+              index
+            ]
+          )
+      );
+
+    const results =
+      await Promise.all(
+        prompts.map(
+          (
+            prompt,
+            index
+          ) =>
+            generateOneVariant(
+              image,
+              prompt,
+              index
+            )
         )
-      )
-    );
+      );
 
     return NextResponse.json({
       success: true,
       results,
-      count: results.length,
+      count:
+        results.length,
     });
   } catch (error) {
-    console.error("Generation error:", error);
+    console.error(
+      "Generation error:",
+      error
+    );
 
     const message =
       error instanceof Error
