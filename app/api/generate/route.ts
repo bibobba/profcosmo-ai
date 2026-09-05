@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { put, issueSignedToken, presignUrl } from "@vercel/blob";
 
 const OPENAI_API_URL =
   "https://api.openai.com/v1/images/edits";
@@ -776,6 +777,52 @@ Before producing the image, verify:
 `;
 }
 
+async function createSignedBlobUrl(
+  base64Image: string,
+  index: number
+) {
+  const imageBuffer =
+    Buffer.from(
+      base64Image,
+      "base64"
+    );
+
+  const pathname =
+    `generated/profcosmo-${Date.now()}-${index}.jpg`;
+
+  const blob =
+    await put(
+      pathname,
+      imageBuffer,
+      {
+        access: "private",
+        contentType:
+          "image/jpeg",
+        addRandomSuffix: true,
+      }
+    );
+
+  const token =
+    await issueSignedToken({
+      operations: ["get"],
+    });
+
+  const signed =
+    await presignUrl(
+      token,
+      {
+        pathname:
+          blob.pathname,
+        operation: "get",
+        validUntil:
+          Date.now() +
+          24 * 60 * 60 * 1000,
+      }
+    );
+
+  return signed.presignedUrl;
+}
+
 export async function POST(
   request: Request
 ) {
@@ -849,10 +896,10 @@ export async function POST(
         formData.get(
           "femaleForm"
         ) ||
-          formData.get(
-            "haircutForm"
-          ) ||
-          ""
+        formData.get(
+          "haircutForm"
+        ) ||
+        ""
       );
 
     const femaleForm =
@@ -1123,6 +1170,10 @@ export async function POST(
       );
     }
 
+    /*
+     * Если окрашивание не выбрано,
+     * цветовые параметры не требуются.
+     */
     if (coloring !== "none") {
       if (
         !isValid(
@@ -1190,14 +1241,15 @@ export async function POST(
       });
 
     /*
-     * Пока генерируем один результат.
+     * Генерируем 3 независимых результата
+     * в одном запросе GPT Image 2.
      *
-     * Три результата подключим после
-     * решения вопроса с хранением изображений,
-     * чтобы не возвращать несколько больших
-     * base64-файлов через Vercel.
+     * Качество:
+     * - high
+     * - 1024x1536
+     * - JPEG
+     * - минимальное сжатие
      */
-
     const openAIForm =
       new FormData();
 
@@ -1218,6 +1270,11 @@ export async function POST(
     );
 
     openAIForm.append(
+      "n",
+      "3"
+    );
+
+    openAIForm.append(
       "size",
       "1024x1536"
     );
@@ -1234,7 +1291,7 @@ export async function POST(
 
     openAIForm.append(
       "output_compression",
-      "80"
+      "95"
     );
 
     const openAIResponse =
@@ -1295,28 +1352,101 @@ export async function POST(
       );
     }
 
-    const base64Image =
-      responseData?.data?.[0]
-        ?.b64_json;
+    const generatedImages =
+      Array.isArray(
+        responseData?.data
+      )
+        ? responseData.data
+            .map(
+              (
+                item: any
+              ) =>
+                item?.b64_json
+            )
+            .filter(
+              (
+                value: any
+              ): value is string =>
+                typeof value ===
+                  "string" &&
+                value.length > 0
+            )
+        : [];
 
-    if (!base64Image) {
+    if (
+      generatedImages.length ===
+      0
+    ) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "OpenAI не вернул изображение.",
+            "OpenAI не вернул изображения.",
         },
         { status: 502 }
       );
     }
 
-    const imageUrl =
-      `data:image/jpeg;base64,${base64Image}`;
+    if (
+      generatedImages.length !==
+      3
+    ) {
+      console.warn(
+        `OpenAI вернул ${generatedImages.length} изображений вместо 3.`
+      );
+    }
+
+    /*
+     * Загружаем результаты в приватный Vercel Blob.
+     * Браузеру не передаём base64.
+     *
+     * Для каждого изображения создаём
+     * отдельный временный signed GET URL.
+     */
+    const imageUrls =
+      await Promise.all(
+        generatedImages
+          .slice(0, 3)
+          .map(
+            (
+              base64Image: string,
+              index: number
+            ) =>
+              createSignedBlobUrl(
+                base64Image,
+                index + 1
+              )
+          )
+      );
+
+    if (
+      imageUrls.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Не удалось сохранить результаты изображений.",
+        },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      imageUrl,
-      imageUrls: [imageUrl],
+
+      /*
+       * Старое поле оставляем для совместимости
+       * с текущим frontend.
+       */
+      imageUrl:
+        imageUrls[0],
+
+      /*
+       * Новое основное поле:
+       * три результата.
+       */
+      imageUrls,
     });
   } catch (error) {
     console.error(
