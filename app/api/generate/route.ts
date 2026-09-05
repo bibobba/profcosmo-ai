@@ -808,20 +808,277 @@ async function createSignedBlobUrl(
     });
 
   const signed =
-  await presignUrl(
-    token,
-    {
-      pathname:
-        blob.pathname,
-      operation: "get",
-      access: "private",
-      validUntil:
-        Date.now() +
-        24 * 60 * 60 * 1000,
-    }
-  );
+    await presignUrl(
+      token,
+      {
+        pathname:
+          blob.pathname,
+        operation: "get",
+        access: "private",
+        validUntil:
+          Date.now() +
+          24 * 60 * 60 * 1000,
+      }
+    );
 
   return signed.presignedUrl;
+}
+
+type Variant = {
+  length: string;
+  structure: string;
+  femaleForm: string;
+  femaleBang: string;
+  femaleParting: string;
+  femaleVolume: string;
+  femaleStyling: string;
+  femaleEnds: string;
+  maleForm: string;
+  maleTemples: string;
+};
+
+function validateVariant(
+  variant: Variant,
+  gender: string,
+  index: number
+) {
+  if (
+    !isValid(
+      variant.structure,
+      VALID_STRUCTURES
+    )
+  ) {
+    throw new Error(
+      `Вариант ${index + 1}: некорректная структура волос.`
+    );
+  }
+
+  if (
+    !isValid(
+      variant.length,
+      VALID_LENGTHS
+    )
+  ) {
+    throw new Error(
+      `Вариант ${index + 1}: некорректно выбрана длина.`
+    );
+  }
+
+  if (gender === "female") {
+    const femaleForm =
+      normalizeFemaleForm(
+        variant.femaleForm
+      );
+
+    if (
+      !isValid(
+        femaleForm,
+        VALID_FEMALE_FORMS
+      )
+    ) {
+      throw new Error(
+        `Вариант ${index + 1}: некорректная форма женской стрижки.`
+      );
+    }
+
+    if (
+      !isValid(
+        variant.femaleBang,
+        VALID_BANGS
+      )
+    ) {
+      throw new Error(
+        `Вариант ${index + 1}: некорректная чёлка.`
+      );
+    }
+
+    if (
+      !isValid(
+        variant.femaleParting,
+        VALID_PARTINGS
+      )
+    ) {
+      throw new Error(
+        `Вариант ${index + 1}: некорректный пробор.`
+      );
+    }
+
+    if (
+      !isValid(
+        variant.femaleVolume,
+        VALID_VOLUMES
+      )
+    ) {
+      throw new Error(
+        `Вариант ${index + 1}: некорректный объём.`
+      );
+    }
+
+    if (
+      !isValid(
+        variant.femaleStyling,
+        VALID_STYLINGS
+      )
+    ) {
+      throw new Error(
+        `Вариант ${index + 1}: некорректная укладка.`
+      );
+    }
+
+    if (
+      !isValid(
+        variant.femaleEnds,
+        VALID_ENDS
+      )
+    ) {
+      throw new Error(
+        `Вариант ${index + 1}: некорректные концы.`
+      );
+    }
+  }
+
+  if (gender === "male") {
+    if (
+      !isValid(
+        variant.maleForm,
+        VALID_MALE_FORMS
+      )
+    ) {
+      throw new Error(
+        `Вариант ${index + 1}: некорректная мужская форма.`
+      );
+    }
+
+    if (
+      !isValid(
+        variant.maleTemples,
+        VALID_TEMPLES
+      )
+    ) {
+      throw new Error(
+        `Вариант ${index + 1}: некорректные виски.`
+      );
+    }
+  }
+}
+
+async function generateOneVariant(params: {
+  image: File;
+  prompt: string;
+  variantIndex: number;
+  apiKey: string;
+}) {
+  const {
+    image,
+    prompt,
+    variantIndex,
+    apiKey,
+  } = params;
+
+  const openAIForm =
+    new FormData();
+
+  openAIForm.append(
+    "model",
+    "gpt-image-2"
+  );
+
+  openAIForm.append(
+    "image",
+    image,
+    image.name
+  );
+
+  openAIForm.append(
+    "prompt",
+    prompt
+  );
+
+  openAIForm.append(
+    "size",
+    "1024x1536"
+  );
+
+  openAIForm.append(
+    "quality",
+    "high"
+  );
+
+  openAIForm.append(
+    "output_format",
+    "jpeg"
+  );
+
+  openAIForm.append(
+    "output_compression",
+    "95"
+  );
+
+  const openAIResponse =
+    await fetch(
+      OPENAI_API_URL,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: openAIForm,
+      }
+    );
+
+  const responseText =
+    await openAIResponse.text();
+
+  let responseData: any;
+
+  try {
+    responseData =
+      JSON.parse(
+        responseText
+      );
+  } catch {
+    throw new Error(
+      `OpenAI вернул некорректный ответ для варианта ${
+        variantIndex + 1
+      }.`
+    );
+  }
+
+  if (
+    !openAIResponse.ok
+  ) {
+    const message =
+      responseData?.error
+        ?.message ||
+      "Ошибка OpenAI Image API.";
+
+    throw new Error(
+      `Вариант ${
+        variantIndex + 1
+      }: ${message}`
+    );
+  }
+
+  const base64Image =
+    responseData?.data?.[0]
+      ?.b64_json;
+
+  if (
+    typeof base64Image !==
+      "string" ||
+    !base64Image
+  ) {
+    throw new Error(
+      `OpenAI не вернул изображение для варианта ${
+        variantIndex + 1
+      }.`
+    );
+  }
+
+  return createSignedBlobUrl(
+    base64Image,
+    variantIndex + 1
+  );
 }
 
 export async function POST(
@@ -880,101 +1137,6 @@ export async function POST(
           ""
       );
 
-    const length =
-      String(
-        formData.get("length") ||
-          "short"
-      );
-
-    const structure =
-      String(
-        formData.get("structure") ||
-          ""
-      );
-
-    const rawFemaleForm =
-      String(
-        formData.get(
-          "femaleForm"
-        ) ||
-        formData.get(
-          "haircutForm"
-        ) ||
-        ""
-      );
-
-    const femaleForm =
-      normalizeFemaleForm(
-        rawFemaleForm
-      );
-
-    const maleForm =
-      String(
-        formData.get(
-          "maleForm"
-        ) || ""
-      );
-
-    const bangs =
-      String(
-        formData.get("bangs") ||
-          "none"
-      );
-
-    const parting =
-      String(
-        formData.get(
-          "parting"
-        ) || "none"
-      );
-
-    const volume =
-      String(
-        formData.get("volume") ||
-          "natural"
-      );
-
-    const styling =
-      String(
-        formData.get(
-          "styling"
-        ) || "natural"
-      );
-
-    const ends =
-      String(
-        formData.get("ends") ||
-          "straight"
-      );
-
-    const temples =
-      String(
-        formData.get(
-          "temples"
-        ) || "straight"
-      );
-
-    const coloring =
-      String(
-        formData.get(
-          "coloring"
-        ) || "none"
-      );
-
-    const colorDepth =
-      String(
-        formData.get(
-          "colorDepth"
-        ) || ""
-      );
-
-    const colorShade =
-      String(
-        formData.get(
-          "colorShade"
-        ) || ""
-      );
-
     if (
       !isValid(
         gender,
@@ -991,169 +1153,67 @@ export async function POST(
       );
     }
 
-    if (
-      !isValid(
-        length,
-        VALID_LENGTHS
-      )
-    ) {
+    const rawVariants =
+      String(
+        formData.get(
+          "variants"
+        ) || ""
+      );
+
+    let variants: Variant[];
+
+    try {
+      variants =
+        JSON.parse(
+          rawVariants
+        );
+    } catch {
       return NextResponse.json(
         {
           success: false,
           error:
-            "Некорректно выбрана длина.",
+            "Не удалось прочитать параметры вариантов.",
         },
         { status: 400 }
       );
     }
 
     if (
-      !isValid(
-        structure,
-        VALID_STRUCTURES
-      )
+      !Array.isArray(
+        variants
+      ) ||
+      variants.length !== 3
     ) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "Некорректно выбрана структура волос.",
+            "Необходимо указать ровно 3 варианта прически.",
         },
         { status: 400 }
       );
     }
 
-    if (gender === "female") {
-      if (
-        !isValid(
-          femaleForm,
-          VALID_FEMALE_FORMS
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Некорректно выбрана форма женской стрижки.",
-          },
-          { status: 400 }
-        );
-      }
+    const colorDepth =
+      String(
+        formData.get(
+          "colorDepth"
+        ) || ""
+      );
 
-      if (
-        !isValid(
-          bangs,
-          VALID_BANGS
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Некорректно выбрана чёлка.",
-          },
-          { status: 400 }
-        );
-      }
+    const colorShade =
+      String(
+        formData.get(
+          "colorShade"
+        ) || ""
+      );
 
-      if (
-        !isValid(
-          parting,
-          VALID_PARTINGS
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Некорректно выбран пробор.",
-          },
-          { status: 400 }
-        );
-      }
-
-      if (
-        !isValid(
-          volume,
-          VALID_VOLUMES
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Некорректно выбран объём.",
-          },
-          { status: 400 }
-        );
-      }
-
-      if (
-        !isValid(
-          styling,
-          VALID_STYLINGS
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Некорректно выбрана укладка.",
-          },
-          { status: 400 }
-        );
-      }
-
-      if (
-        !isValid(
-          ends,
-          VALID_ENDS
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Некорректно выбраны концы.",
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (gender === "male") {
-      if (
-        !isValid(
-          maleForm,
-          VALID_MALE_FORMS
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Некорректно выбрана мужская форма.",
-          },
-          { status: 400 }
-        );
-      }
-
-      if (
-        !isValid(
-          temples,
-          VALID_TEMPLES
-        )
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Некорректно выбраны виски.",
-          },
-          { status: 400 }
-        );
-      }
-    }
+    const coloring =
+      String(
+        formData.get(
+          "coloring"
+        ) || "none"
+      );
 
     if (
       !isValid(
@@ -1171,10 +1231,6 @@ export async function POST(
       );
     }
 
-    /*
-     * Если окрашивание не выбрано,
-     * цветовые параметры не требуются.
-     */
     if (coloring !== "none") {
       if (
         !isValid(
@@ -1223,230 +1279,92 @@ export async function POST(
       }
     }
 
-    const prompt =
-      buildPrompt({
+    for (
+      let index = 0;
+      index < variants.length;
+      index++
+    ) {
+      validateVariant(
+        variants[index],
         gender,
-        length,
-        structure,
-        femaleForm,
-        maleForm,
-        bangs,
-        parting,
-        volume,
-        styling,
-        ends,
-        temples,
-        coloring,
-        colorDepth,
-        colorShade,
-      });
+        index
+      );
+    }
 
     /*
-     * Генерируем 3 независимых результата
-     * в одном запросе GPT Image 2.
+     * Для каждого варианта создаём
+     * отдельный prompt и отдельный
+     * запрос в GPT Image 2.
      *
-     * Качество:
-     * - high
-     * - 1024x1536
-     * - JPEG
-     * - минимальное сжатие
+     * Цвет при этом одинаковый для всех
+     * трёх вариантов.
      */
-    const openAIForm =
-      new FormData();
+    const prompts =
+      variants.map(
+        (
+          variant
+        ) => {
+          const femaleForm =
+            normalizeFemaleForm(
+              variant.femaleForm
+            );
 
-    openAIForm.append(
-      "model",
-      "gpt-image-2"
-    );
-
-    openAIForm.append(
-      "image",
-      image,
-      image.name
-    );
-
-    openAIForm.append(
-      "prompt",
-      prompt
-    );
-
-    openAIForm.append(
-      "n",
-      "3"
-    );
-
-    openAIForm.append(
-      "size",
-      "1024x1536"
-    );
-
-    openAIForm.append(
-      "quality",
-      "high"
-    );
-
-    openAIForm.append(
-      "output_format",
-      "jpeg"
-    );
-
-    openAIForm.append(
-      "output_compression",
-      "95"
-    );
-
-    const openAIResponse =
-      await fetch(
-        OPENAI_API_URL,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: openAIForm,
+          return buildPrompt({
+            gender,
+            length:
+              variant.length,
+            structure:
+              variant.structure,
+            femaleForm,
+            maleForm:
+              variant.maleForm,
+            bangs:
+              variant.femaleBang,
+            parting:
+              variant.femaleParting,
+            volume:
+              variant.femaleVolume,
+            styling:
+              variant.femaleStyling,
+            ends:
+              variant.femaleEnds,
+            temples:
+              variant.maleTemples,
+            coloring,
+            colorDepth,
+            colorShade,
+          });
         }
       );
-
-    const responseText =
-      await openAIResponse.text();
-
-    let responseData: any;
-
-    try {
-      responseData =
-        JSON.parse(
-          responseText
-        );
-    } catch {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "OpenAI вернул некорректный ответ.",
-        },
-        { status: 502 }
-      );
-    }
-
-    if (
-      !openAIResponse.ok
-    ) {
-      const message =
-        responseData?.error
-          ?.message ||
-        "Ошибка OpenAI Image API.";
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: message,
-        },
-        {
-          status:
-            openAIResponse.status >=
-              400 &&
-            openAIResponse.status <
-              600
-              ? openAIResponse.status
-              : 502,
-        }
-      );
-    }
-
-    const generatedImages =
-      Array.isArray(
-        responseData?.data
-      )
-        ? responseData.data
-            .map(
-              (
-                item: any
-              ) =>
-                item?.b64_json
-            )
-            .filter(
-              (
-                value: any
-              ): value is string =>
-                typeof value ===
-                  "string" &&
-                value.length > 0
-            )
-        : [];
-
-    if (
-      generatedImages.length ===
-      0
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "OpenAI не вернул изображения.",
-        },
-        { status: 502 }
-      );
-    }
-
-    if (
-      generatedImages.length !==
-      3
-    ) {
-      console.warn(
-        `OpenAI вернул ${generatedImages.length} изображений вместо 3.`
-      );
-    }
 
     /*
-     * Загружаем результаты в приватный Vercel Blob.
-     * Браузеру не передаём base64.
+     * ВАЖНО:
+     * Это три независимых генерации.
      *
-     * Для каждого изображения создаём
-     * отдельный временный signed GET URL.
+     * Мы запускаем их параллельно,
+     * чтобы не ждать 3 раза последовательно.
      */
     const imageUrls =
       await Promise.all(
-        generatedImages
-          .slice(0, 3)
-          .map(
-            (
-              base64Image: string,
-              index: number
-            ) =>
-              createSignedBlobUrl(
-                base64Image,
-                index + 1
-              )
-          )
+        prompts.map(
+          (
+            prompt,
+            index
+          ) =>
+            generateOneVariant({
+              image,
+              prompt,
+              variantIndex:
+                index,
+              apiKey,
+            })
+        )
       );
-
-    if (
-      imageUrls.length === 0
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Не удалось сохранить результаты изображений.",
-        },
-        { status: 502 }
-      );
-    }
 
     return NextResponse.json({
       success: true,
-
-      /*
-       * Старое поле оставляем для совместимости
-       * с текущим frontend.
-       */
       imageUrl:
         imageUrls[0],
-
-      /*
-       * Новое основное поле:
-       * три результата.
-       */
       imageUrls,
     });
   } catch (error) {
