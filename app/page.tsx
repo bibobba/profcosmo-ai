@@ -98,12 +98,16 @@ const coloringTechniques: Option[] = [
   { value: "blond", label: "Блонд" },
 ];
 
-const toneLevels: Option[] = Array.from(
+const allToneLevels: Option[] = Array.from(
   { length: 10 },
   (_, i) => ({
     value: String(i + 1),
     label: `${i + 1} тон`,
   })
+);
+
+const blondToneLevels: Option[] = allToneLevels.filter(
+  (option) => Number(option.value) >= 7
 );
 
 const shadesByTone: Record<string, Option[]> = {
@@ -263,13 +267,18 @@ export default function Home() {
   const [error, setError] =
     useState("");
 
-  const availableShades = colorDepth
-    ? shadesByTone[colorDepth] || []
-    : [];
-
   const maleLengthVisible =
     maleForm === "undercut" ||
     maleForm === "elongated";
+
+  const toneOptions =
+    coloring === "blond"
+      ? blondToneLevels
+      : allToneLevels;
+
+  const availableShades = colorDepth
+    ? shadesByTone[colorDepth] || []
+    : [];
 
   function handleImage(file: File | null) {
     if (!file) return;
@@ -286,7 +295,6 @@ export default function Home() {
     nextGender: "female" | "male"
   ) {
     setGender(nextGender);
-
     setStructure("straight");
 
     if (nextGender === "female") {
@@ -301,10 +309,6 @@ export default function Home() {
     } else {
       setMaleForm("classic");
       setMaleTemples("straight");
-
-      // Для мужских форм,
-      // где длина не используется,
-      // сохраняем нейтральное значение.
       setLength("short");
     }
   }
@@ -314,14 +318,44 @@ export default function Home() {
   ) {
     setMaleForm(value);
 
-    // Длина имеет смысл только
-    // для Undercut и Удлинённой.
     if (
       value !== "undercut" &&
       value !== "elongated"
     ) {
       setLength("short");
     }
+  }
+
+  function handleColoringChange(
+    value: string
+  ) {
+    setColoring(value);
+
+    if (value === "none") {
+      setColorDepth("");
+      setColorShade("");
+      return;
+    }
+
+    if (value === "blond") {
+      // Блонд начинается с 7 уровня.
+      if (
+        !colorDepth ||
+        Number(colorDepth) < 7
+      ) {
+        setColorDepth("7");
+        setColorShade("");
+      }
+
+      return;
+    }
+  }
+
+  function handleToneChange(
+    value: string
+  ) {
+    setColorDepth(value);
+    setColorShade("");
   }
 
   async function generate() {
@@ -332,25 +366,20 @@ export default function Home() {
       return;
     }
 
-    if (!colorDepth) {
-      setError(
-        "Выберите уровень тона."
-      );
-      return;
-    }
+    if (coloring !== "none") {
+      if (!colorDepth) {
+        setError(
+          "Выберите уровень тона."
+        );
+        return;
+      }
 
-    if (!colorShade) {
-      setError(
-        "Выберите оттенок."
-      );
-      return;
-    }
-
-    if (!coloring) {
-      setError(
-        "Выберите технику окрашивания."
-      );
-      return;
+      if (!colorShade) {
+        setError(
+          "Выберите оттенок."
+        );
+        return;
+      }
     }
 
     setLoading(true);
@@ -371,8 +400,6 @@ export default function Home() {
         gender
       );
 
-      // Для женщин длина всегда передаётся.
-      // Для мужчин — только Undercut/Удлинённая.
       if (
         gender === "female" ||
         maleLengthVisible
@@ -490,9 +517,12 @@ export default function Home() {
         coloring
       );
 
+      // Пока один результат.
+      // Три варианта подключим после решения
+      // вопроса с хранением изображений.
       formData.append(
         "variants",
-        "3"
+        "1"
       );
 
       const response =
@@ -521,7 +551,7 @@ export default function Home() {
       ) {
         throw new Error(
           data.error ||
-            `Не удалось создать варианты прически. Код: ${response.status}`
+            `Не удалось создать вариант прически. Код: ${response.status}`
         );
       }
 
@@ -536,7 +566,7 @@ export default function Home() {
 
       if (!images.length) {
         throw new Error(
-          "AI не вернул изображения."
+          "AI не вернул изображение."
         );
       }
 
@@ -631,9 +661,6 @@ export default function Home() {
             }
           />
 
-          {/* Женщинам длина нужна всегда.
-              Мужчинам — только для Undercut
-              и Удлинённой формы. */}
           {gender === "female" ? (
             <OptionGroup
               title="Длина"
@@ -731,12 +758,9 @@ export default function Home() {
 
           <OptionGroup
             title="Уровень тона"
-            options={toneLevels}
+            options={toneOptions}
             value={colorDepth}
-            onChange={(value) => {
-              setColorDepth(value);
-              setColorShade("");
-            }}
+            onChange={handleToneChange}
           />
 
           {colorDepth ? (
@@ -752,7 +776,9 @@ export default function Home() {
             title="Техника окрашивания"
             options={coloringTechniques}
             value={coloring}
-            onChange={setColoring}
+            onChange={
+              handleColoringChange
+            }
           />
         </section>
 
@@ -764,7 +790,7 @@ export default function Home() {
             onClick={generate}
           >
             {loading
-              ? "Создаём варианты..."
+              ? "Создаём вариант..."
               : "Подобрать прическу"}
           </button>
 
@@ -782,9 +808,8 @@ export default function Home() {
             </h2>
 
             <p className="results-description">
-              Несколько вариантов
-              на основе выбранных
-              параметров.
+              Результат на основе
+              выбранных параметров.
             </p>
 
             <div className="results-grid">
