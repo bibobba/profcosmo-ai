@@ -499,7 +499,6 @@ async function createSignedBlobUrl(
 ): Promise<string> {
   const token = await issueSignedToken({
     pathname,
-    secret: process.env.BLOB_READ_WRITE_TOKEN!,
     onRequest: {
       method: "GET",
     },
@@ -623,9 +622,15 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!Array.isArray(variants) || variants.length < 1 || variants.length > 3) {
+    if (
+      !Array.isArray(variants) ||
+      variants.length < 1 ||
+      variants.length > 3
+    ) {
       return NextResponse.json(
-        { error: "Количество вариантов должно быть от 1 до 3" },
+        {
+          error: "Количество вариантов должно быть от 1 до 3",
+        },
         { status: 400 }
       );
     }
@@ -642,7 +647,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const colorMode = colorModeValue as "shared" | "individual";
+    const colorMode =
+      colorModeValue as "shared" | "individual";
 
     const sharedColor: ColorSettings = {
       colorDepth: String(
@@ -662,7 +668,9 @@ export async function POST(request: Request) {
       !isAllowed(sharedColor.coloring, COLORING)
     ) {
       return NextResponse.json(
-        { error: "Некорректные общие параметры цвета" },
+        {
+          error: "Некорректные общие параметры цвета",
+        },
         { status: 400 }
       );
     }
@@ -675,16 +683,24 @@ export async function POST(request: Request) {
 
       if (typeof rawIndividualColors !== "string") {
         return NextResponse.json(
-          { error: "Индивидуальные параметры цвета не переданы" },
+          {
+            error:
+              "Индивидуальные параметры цвета не переданы",
+          },
           { status: 400 }
         );
       }
 
       try {
-        individualColors = JSON.parse(rawIndividualColors);
+        individualColors = JSON.parse(
+          rawIndividualColors
+        );
       } catch {
         return NextResponse.json(
-          { error: "Некорректный формат индивидуальных цветов" },
+          {
+            error:
+              "Некорректный формат индивидуальных цветов",
+          },
           { status: 400 }
         );
       }
@@ -705,12 +721,24 @@ export async function POST(request: Request) {
       for (const color of individualColors) {
         if (
           !color ||
-          !isAllowed(String(color.colorDepth), COLOR_DEPTHS) ||
-          !isAllowed(String(color.colorShade), COLOR_SHADES) ||
-          !isAllowed(String(color.coloring), COLORING)
+          !isAllowed(
+            String(color.colorDepth),
+            COLOR_DEPTHS
+          ) ||
+          !isAllowed(
+            String(color.colorShade),
+            COLOR_SHADES
+          ) ||
+          !isAllowed(
+            String(color.coloring),
+            COLORING
+          )
         ) {
           return NextResponse.json(
-            { error: "Некорректные индивидуальные параметры цвета" },
+            {
+              error:
+                "Некорректные индивидуальные параметры цвета",
+            },
             { status: 400 }
           );
         }
@@ -722,29 +750,57 @@ export async function POST(request: Request) {
     for (const variant of variants) {
       if (
         typeof variant !== "object" ||
-        !isAllowed(String(variant.structure), STRUCTURES)
+        !isAllowed(
+          String(variant.structure),
+          STRUCTURES
+        )
       ) {
         return NextResponse.json(
-          { error: "Некорректная структура волос" },
+          {
+            error: "Некорректная структура волос",
+          },
           { status: 400 }
         );
       }
 
       if (gender === "female") {
         if (
-          !isAllowed(String(variant.length), FEMALE_LENGTHS) ||
           !isAllowed(
-            normalizeFemaleForm(String(variant.femaleForm)),
+            String(variant.length),
+            FEMALE_LENGTHS
+          ) ||
+          !isAllowed(
+            normalizeFemaleForm(
+              String(variant.femaleForm)
+            ),
             FEMALE_FORMS
           ) ||
-          !isAllowed(String(variant.femaleBang), FEMALE_BANGS) ||
-          !isAllowed(String(variant.femaleParting), FEMALE_PARTINGS) ||
-          !isAllowed(String(variant.femaleVolume), FEMALE_VOLUMES) ||
-          !isAllowed(String(variant.femaleStyling), FEMALE_STYLINGS) ||
-          !isAllowed(String(variant.femaleEnds), FEMALE_ENDS)
+          !isAllowed(
+            String(variant.femaleBang),
+            FEMALE_BANGS
+          ) ||
+          !isAllowed(
+            String(variant.femaleParting),
+            FEMALE_PARTINGS
+          ) ||
+          !isAllowed(
+            String(variant.femaleVolume),
+            FEMALE_VOLUMES
+          ) ||
+          !isAllowed(
+            String(variant.femaleStyling),
+            FEMALE_STYLINGS
+          ) ||
+          !isAllowed(
+            String(variant.femaleEnds),
+            FEMALE_ENDS
+          )
         ) {
           return NextResponse.json(
-            { error: "Некорректные параметры женской прически" },
+            {
+              error:
+                "Некорректные параметры женской прически",
+            },
             { status: 400 }
           );
         }
@@ -752,11 +808,20 @@ export async function POST(request: Request) {
 
       if (gender === "male") {
         if (
-          !isAllowed(String(variant.maleForm), MALE_FORMS) ||
-          !isAllowed(String(variant.maleTemples), MALE_TEMPLES)
+          !isAllowed(
+            String(variant.maleForm),
+            MALE_FORMS
+          ) ||
+          !isAllowed(
+            String(variant.maleTemples),
+            MALE_TEMPLES
+          )
         ) {
           return NextResponse.json(
-            { error: "Некорректные параметры мужской прически" },
+            {
+              error:
+                "Некорректные параметры мужской прически",
+            },
             { status: 400 }
           );
         }
@@ -780,7 +845,11 @@ export async function POST(request: Request) {
 
     const results = await Promise.all(
       prompts.map((prompt, index) =>
-        generateOneVariant(image, prompt, index)
+        generateOneVariant(
+          image,
+          prompt,
+          index
+        )
       )
     );
 
