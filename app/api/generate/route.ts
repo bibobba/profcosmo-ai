@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { PALETTE } from "@/lib/palette";
+import { deflateSync } from "node:zlib";
 import {
   put,
   issueSignedToken,
@@ -647,7 +649,8 @@ FEMALE LONG CASCADE:
 function getColorDescription(
   coloring: string,
   tone: string,
-  shade: string
+  shade: string,
+  colorCode: string
 ) {
   if (coloring === "none") {
     return `
@@ -754,8 +757,12 @@ COLOR:
         "professional hair coloring";
   }
 
+  const exactShade = colorCode ? PALETTE.find((item) => item.code === colorCode) : null;
+
   return `
 COLOR:
+- Exact professional palette code: ${colorCode || "not selected"}.
+- Palette family: ${exactShade?.family || "not selected"}.
 - Coloring technique: ${techniqueDescription}.
 - Tone level: ${tone} — ${
     toneDescription[tone] ||
@@ -824,6 +831,7 @@ function buildPrompt(params: {
     coloring,
     colorDepth,
     colorShade,
+    colorCode,
   } = params;
 
   const common = `
@@ -880,7 +888,8 @@ Do not change clothing, pose, background or lighting.
     getColorDescription(
       coloring,
       colorDepth,
-      colorShade
+      colorShade,
+      colorCode
     );
 
   if (gender === "male") {
@@ -1018,6 +1027,7 @@ type ColorInput = {
   colorDepth?: string;
   colorShade?: string;
   coloring?: string;
+  colorCode?: string;
 };
 
 function validateVariant(
@@ -1214,6 +1224,8 @@ function validateColor(
       )
     );
 
+  const colorCode = String(color.colorCode || "");
+
   if (
     !isValid(
       coloring,
@@ -1236,13 +1248,14 @@ function validateColor(
     return "Выберите корректный уровень тона.";
   }
 
-  if (
-    !isValid(
-      colorShade,
-      VALID_SHADES
-    )
-  ) {
-    return "Выберите корректный оттенок.";
+  if (colorCode) {
+    const paletteEntry = PALETTE.find((item) => item.code === colorCode);
+    if (!paletteEntry) return "Выбранный код оттенка отсутствует в палитре.";
+    if (paletteEntry.level && Number(colorDepth) !== paletteEntry.level) {
+      return "Уровень тона не соответствует выбранному коду палитры.";
+    }
+  } else if (!isValid(colorShade, VALID_SHADES)) {
+    return "Выберите оттенок или точный код профессиональной палитры.";
   }
 
   if (
@@ -1263,11 +1276,13 @@ async function generateOneVariant(params: {
   apiKey: string;
   image: File;
   prompt: string;
+  paletteReference?: File | null;
 }) {
   const {
     apiKey,
     image,
     prompt,
+    paletteReference,
   } = params;
 
   const openAIForm =
@@ -1279,10 +1294,18 @@ async function generateOneVariant(params: {
   );
 
   openAIForm.append(
-    "image",
+    "image[]",
     image,
     image.name
   );
+
+  if (paletteReference) {
+    openAIForm.append(
+      "image[]",
+      paletteReference,
+      paletteReference.name
+    );
+  }
 
   openAIForm.append(
     "prompt",
@@ -1357,6 +1380,38 @@ async function generateOneVariant(params: {
   }
 
   return base64Image;
+}
+
+function hexToRgb(hex: string) {
+  const clean = hex.replace("#", "");
+  return { r: parseInt(clean.slice(0, 2), 16), g: parseInt(clean.slice(2, 4), 16), b: parseInt(clean.slice(4, 6), 16) };
+}
+
+function crc32(buffer: Buffer) {
+  let crc = 0xffffffff;
+  for (const byte of buffer) {
+    crc ^= byte;
+    for (let i = 0; i < 8; i++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type: string, data: Buffer) {
+  const typeBuffer = Buffer.from(type, "ascii");
+  const length = Buffer.alloc(4); length.writeUInt32BE(data.length, 0);
+  const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([typeBuffer, data])), 0);
+  return Buffer.concat([length, typeBuffer, data, crc]);
+}
+
+function createPaletteReference(hex: string, code: string) {
+  const { r, g, b } = hexToRgb(hex);
+  const width = 512, height = 512;
+  const row = Buffer.alloc(1 + width * 4); row[0] = 0;
+  for (let x = 0; x < width; x++) { const o = 1 + x * 4; row[o] = r; row[o + 1] = g; row[o + 2] = b; row[o + 3] = 255; }
+  const raw = Buffer.concat(Array.from({ length: height }, () => row));
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 6;
+  const png = Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]), pngChunk("IHDR", ihdr), pngChunk("IDAT", deflateSync(raw, { level: 9 })), pngChunk("IEND", Buffer.alloc(0))]);
+  return new File([png], "palette-" + code.replaceAll("/", "_") + ".png", { type: "image/png" });
 }
 
 /* =========================================================
@@ -1636,6 +1691,13 @@ export async function POST(
             "sharedColoring"
           ) || "none"
         ),
+
+      colorCode:
+        String(
+          formData.get(
+            "sharedColorCode"
+          ) || ""
+        ),
     };
 
     /* -----------------------------------------------------
@@ -1899,6 +1961,10 @@ export async function POST(
               )
             );
 
+          const colorCode = String(selectedColor?.colorCode || "");
+          const paletteEntry = colorCode ? PALETTE.find((item) => item.code === colorCode) : null;
+          const paletteReference = paletteEntry ? createPaletteReference(paletteEntry.hex, paletteEntry.code) : null;
+
           const prompt =
             buildPrompt({
               gender,
@@ -1921,11 +1987,13 @@ export async function POST(
               coloring,
               colorDepth,
               colorShade,
+              colorCode,
             });
 
           return {
             index,
             prompt,
+            paletteReference,
           };
         }
       );
