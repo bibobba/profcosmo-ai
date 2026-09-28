@@ -41,14 +41,49 @@ const structures: Option[] = [
   { value: "afro-curls", label: "Афро-кудри" },
 ];
 
-const femaleForms: Option[] = [
-  { value: "ai-podbor", label: "AI-подбор" },
-  { value: "straight-cut", label: "Прямой срез" },
-  { value: "graduated", label: "Градуированная" },
-  { value: "layers", label: "Слои" },
-  { value: "cascade", label: "Каскадная" },
-  { value: "asymmetrical", label: "Асимметричная" },
+const femaleLengths: Option[] = [
+  { value: "very-short", label: "Очень короткие" },
+  { value: "short", label: "Короткие" },
+  { value: "medium", label: "Средние" },
+  { value: "long", label: "Длинные" },
 ];
+
+const femaleHaircutsByLength: Record<string, Option[]> = {
+  "very-short": [
+    { value: "ultra-short", label: "Ультракороткая" },
+    { value: "pixie-shaved-temples", label: "Пикси с бритыми висками" },
+    { value: "short", label: "Короткая" },
+  ],
+  short: [
+    { value: "pixie", label: "Пикси" },
+    { value: "trixie", label: "Трикси" },
+    { value: "vixie", label: "Викси" },
+    { value: "asym-pixie-bob", label: "Асимметричный пикси-боб" },
+    { value: "bixie", label: "Бикси" },
+    { value: "bowl-cut", label: "Боул-кат (горшок)" },
+  ],
+  medium: [
+    { value: "shag", label: "Шэг" },
+    { value: "blunt-bob", label: "Каре с прямым срезом" },
+    { value: "graduated-bob", label: "Градуированный боб" },
+    { value: "long-bob", label: "Лонг-боб" },
+    { value: "elongated-bob", label: "Удлинённое каре" },
+    { value: "shaggy-bob", label: "Шэгги-каре" },
+  ],
+  long: [
+    { value: "mullet", label: "Маллет" },
+    { value: "wolf-cut", label: "Вулф-кат" },
+    { value: "long-butterfly", label: "Длинная «бабочка»" },
+    { value: "long-cascade", label: "Длинный каскад" },
+  ],
+};
+
+function femaleHaircutOptions(length: string): Option[] {
+  return [
+    { value: "ai-podbor", label: "AI-подбор" },
+    ...(femaleHaircutsByLength[length] || []),
+  ];
+}
 
 const femaleBangs: Option[] = [
   { value: "none", label: "Без чёлки" },
@@ -265,11 +300,11 @@ function getVariantSummary(
       )?.label || "";
 
     const form =
-      femaleForms.find(
+      femaleHaircutOptions(variant.length).find(
         (item) => item.value === variant.femaleForm
       )?.label || "";
 
-    return `${length} · ${structure} · ${form}`;
+    return length + " · " + structure + " · " + form;
   }
 
   const form =
@@ -964,13 +999,30 @@ export default function Home() {
               <>
                 <OptionGroup
                   title="Длина"
-                  options={lengths}
+                  options={femaleLengths}
                   value={currentVariant.length}
                   onChange={(value) =>
                     updateVariant(
                       activeVariant,
                       {
                         length: value,
+                        femaleForm: "ai-podbor",
+                      }
+                    )
+                  }
+                />
+
+                <OptionGroup
+                  title="Стрижка"
+                  options={femaleHaircutOptions(
+                    currentVariant.length
+                  )}
+                  value={currentVariant.femaleForm}
+                  onChange={(value) =>
+                    updateVariant(
+                      activeVariant,
+                      {
+                        femaleForm: value,
                       }
                     )
                   }
