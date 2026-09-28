@@ -815,6 +815,7 @@ function buildPrompt(params: {
   coloring: string;
   colorDepth: string;
   colorShade: string;
+  colorCode: string;
 }) {
   const {
     gender,
