@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PalettePicker } from "@/components/PalettePicker";
 
 type Option = {
   value: string;
@@ -24,6 +25,7 @@ type ColorSettings = {
   colorDepth: string;
   colorShade: string;
   coloring: string;
+  colorCode: string;
 };
 
 const lengths: Option[] = [
@@ -248,6 +250,7 @@ function createDefaultColor(): ColorSettings {
     colorDepth: "5",
     colorShade: "natural",
     coloring: "none",
+    colorCode: "",
   };
 }
 
@@ -338,6 +341,7 @@ function ColorSettingsBlock({
         coloring: value,
         colorDepth: "5",
         colorShade: "natural",
+        colorCode: "",
       });
       return;
     }
@@ -350,6 +354,7 @@ function ColorSettingsBlock({
         coloring: value,
         colorDepth: "7",
         colorShade: "",
+        colorCode: "",
       });
       return;
     }
@@ -357,6 +362,7 @@ function ColorSettingsBlock({
     onChange({
       coloring: value,
       colorShade: "",
+      colorCode: "",
     });
   }
 
@@ -379,22 +385,41 @@ function ColorSettingsBlock({
               onChange({
                 colorDepth: value,
                 colorShade: "",
+                colorCode: "",
               })
             }
           />
 
           {color.colorDepth ? (
             <OptionGroup
-              title="Оттенок"
+              title="Оттенок (общее направление)"
               options={availableShades}
               value={color.colorShade}
               onChange={(value) =>
                 onChange({
                   colorShade: value,
+                  colorCode: "",
                 })
               }
             />
           ) : null}
+
+          <div className="option-group">
+            <h3>Профессиональная палитра</h3>
+            <p style={{ margin: "-6px 0 12px", color: "#77736c", fontSize: 13 }}>
+              Выберите точный код из каталога. Код имеет приоритет над общим названием оттенка.
+            </p>
+            <PalettePicker
+              value={color.colorCode}
+              onChange={(entry) =>
+                onChange({
+                  colorCode: entry.code,
+                  colorDepth: entry.level ? String(entry.level) : color.colorDepth,
+                  colorShade: entry.family,
+                })
+              }
+            />
+          </div>
         </>
       ) : null}
     </>
@@ -688,6 +713,11 @@ export default function Home() {
       formData.append(
         "sharedColoring",
         sharedColor.coloring
+      );
+
+      formData.append(
+        "sharedColorCode",
+        sharedColor.colorCode
       );
 
       formData.append(
