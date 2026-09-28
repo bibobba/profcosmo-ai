@@ -1045,22 +1045,6 @@ export default function Home() {
                 />
 
                 <OptionGroup
-                  title="Форма стрижки"
-                  options={femaleForms}
-                  value={
-                    currentVariant.femaleForm
-                  }
-                  onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        femaleForm: value,
-                      }
-                    )
-                  }
-                />
-
-                <OptionGroup
                   title="Чёлка"
                   options={femaleBangs}
                   value={
