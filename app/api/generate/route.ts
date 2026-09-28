@@ -32,13 +32,56 @@ const VALID_STRUCTURES = [
 
 const VALID_FEMALE_FORMS = [
   "ai",
-  "straight-cut",
-  "blunt",
-  "graduated",
-  "layers",
-  "cascade",
-  "asymmetrical",
+  "ultra-short",
+  "pixie-shaved-temples",
+  "short",
+  "pixie",
+  "trixie",
+  "vixie",
+  "asym-pixie-bob",
+  "bixie",
+  "bowl-cut",
+  "shag",
+  "blunt-bob",
+  "graduated-bob",
+  "long-bob",
+  "elongated-bob",
+  "shaggy-bob",
+  "mullet",
+  "wolf-cut",
+  "long-butterfly",
+  "long-cascade",
 ];
+
+const FEMALE_HAIRCUTS_BY_LENGTH: Record<string, string[]> = {
+  "very-short": [
+    "ultra-short",
+    "pixie-shaved-temples",
+    "short",
+  ],
+  short: [
+    "pixie",
+    "trixie",
+    "vixie",
+    "asym-pixie-bob",
+    "bixie",
+    "bowl-cut",
+  ],
+  medium: [
+    "shag",
+    "blunt-bob",
+    "graduated-bob",
+    "long-bob",
+    "elongated-bob",
+    "shaggy-bob",
+  ],
+  long: [
+    "mullet",
+    "wolf-cut",
+    "long-butterfly",
+    "long-cascade",
+  ],
+};
 
 const VALID_MALE_FORMS = [
   "classic",
@@ -422,64 +465,181 @@ function getFemaleFormDescription(
     case "ai":
       return `
 FEMALE AI-PICK:
-- Choose the most professionally suitable haircut shape based on the person's face, head shape, natural hair structure, selected length and all other parameters.
+- Choose the most professionally suitable haircut from the selected length category based on the person's face, head shape, natural hair structure and all other parameters.
 - The result must still respect every explicit parameter.
 - Do not randomly choose an extreme hairstyle.
 `;
 
-    case "straight-cut":
+    case "ultra-short":
       return `
-FEMALE STRAIGHT CUT:
-- Clean, clearly defined one-length perimeter.
-- Strong straight cutting line.
-- Dense, controlled lower edge.
-- No visible cascade.
-- No obvious layers.
-- Do not turn this into a graduated bob.
+FEMALE ULTRA-SHORT:
+- Extremely short feminine haircut.
+- Hair is kept very close to the head with a clearly ultra-short silhouette.
+- Do not turn it into a bob, pixie with long top, or medium-length haircut.
 `;
 
-    case "graduated":
+    case "pixie-shaved-temples":
       return `
-FEMALE GRADUATED HAIRCUT:
-- Visible progressive change in length and weight.
-- Professional graduated geometry.
-- Clear difference between shorter and longer sections.
-- Controlled shape around the head.
+FEMALE PIXIE WITH SHAVED TEMPLES:
+- Clearly recognizable pixie haircut.
+- Temples are visibly shaved or very closely cropped.
+- Keep the top and crown longer than the shaved temple area.
+- The shaved temple detail must be clearly visible.
 `;
 
-    case "layers":
+    case "short":
       return `
-FEMALE LAYERED HAIRCUT:
-- Multiple clearly distinguishable length levels.
-- Upper/internal sections must be shorter than the lower sections.
-- Visible layering throughout the shape.
-- Do NOT make the result look like a one-length bob.
-- Do NOT make it look like a simple blunt cut.
+FEMALE SHORT HAIRCUT:
+- Clearly short feminine haircut.
+- Hair remains above or around the ears and nape rather than becoming a bob.
+- Compact, intentionally short silhouette.
 `;
 
-    case "cascade":
+    case "pixie":
       return `
-FEMALE CASCADE:
-- Clearly pronounced cascading structure.
-- Shorter upper and front sections progressively transition into longer lower sections.
-- Multiple visible length levels.
-- Strong layered cascade silhouette.
-- Do NOT create a one-length haircut.
+FEMALE PIXIE:
+- Clearly recognizable classic pixie haircut.
+- Short sides and back with a visibly longer top.
+- Compact feminine silhouette.
+- Do not turn it into a bob or bowl cut.
 `;
 
-    case "asymmetrical":
+    case "trixie":
       return `
-FEMALE ASYMMETRICAL HAIRCUT:
+FEMALE TRIXIE:
+- Clearly recognizable modern Trixie haircut: a short pixie-derived silhouette with a deliberately elongated, textured top and/or front.
+- Keep the sides and back noticeably shorter than the top/front.
+- Do not turn it into a generic bob.
+`;
+
+    case "vixie":
+      return `
+FEMALE VIXIE:
+- Clearly recognizable Vixie haircut: a pixie-bob hybrid.
+- Shorter cropped areas combined with visibly longer side/front sections.
+- Maintain a deliberate transition between pixie and bob proportions.
+- Do not make it a standard one-length bob.
+`;
+
+    case "asym-pixie-bob":
+      return `
+FEMALE ASYMMETRICAL PIXIE-BOB:
+- Clearly recognizable hybrid of pixie and bob.
 - Left and right sides must visibly differ in length or shape.
-- Professional intentional asymmetry.
-- The asymmetry must be obvious enough to recognize.
+- One side can be noticeably longer than the other.
+- The asymmetry must be intentional and obvious.
+`;
+
+    case "bixie":
+      return `
+FEMALE BIXIE:
+- Clearly recognizable bixie: a pixie-bob hybrid between a pixie and a short bob.
+- Shorter nape and sides with more length and movement around the crown, sides and front.
+- Do not make it a conventional blunt bob.
+`;
+
+    case "bowl-cut":
+      return `
+FEMALE BOWL CUT:
+- Clearly recognizable bowl-cut or mushroom silhouette.
+- Strong rounded perimeter around the head with a deliberate bowl-like shape.
+- Keep the shape compact and graphic.
+- Do not turn it into a generic pixie.
+`;
+
+    case "shag":
+      return `
+FEMALE SHAG:
+- Clearly recognizable shag haircut.
+- Multiple disconnected-looking layers with shorter upper sections and longer textured lower sections.
+- Strong texture and intentionally lived-in silhouette.
+- Do not make it a simple layered bob.
+`;
+
+    case "blunt-bob":
+      return `
+FEMALE BLUNT BOB:
+- Clearly recognizable bob with a clean, strong straight perimeter.
+- One dominant length line around the lower edge.
+- Dense, controlled ends.
+- No pronounced cascade.
+`;
+
+    case "graduated-bob":
+      return `
+FEMALE GRADUATED BOB:
+- Clearly recognizable graduated bob.
+- Back and nape are shorter and the hair progressively becomes longer toward the front.
+- Visible graduated geometry and controlled weight.
+- Do not make it a one-length bob.
+`;
+
+    case "long-bob":
+      return `
+FEMALE LONG BOB:
+- Clearly recognizable long bob (lob).
+- Bob silhouette extending around the shoulders or slightly above or below depending on the selected length.
+- Controlled perimeter with more length than a classic bob.
+- Do not make it chest-length.
+`;
+
+    case "elongated-bob":
+      return `
+FEMALE ELONGATED BOB:
+- Clearly recognizable elongated bob.
+- Longer bob proportions than a classic bob, with a controlled perimeter.
+- Keep the shape clearly bob-based rather than turning it into a generic long haircut.
+`;
+
+    case "shaggy-bob":
+      return `
+FEMALE SHAGGY BOB:
+- Clearly recognizable shaggy bob.
+- Bob-based silhouette combined with visible layers, texture and movement.
+- More textured and irregular than a blunt bob.
+- Do not make it a simple one-length bob.
+`;
+
+    case "mullet":
+      return `
+FEMALE MULLET:
+- Clearly recognizable mullet structure.
+- Shorter, more layered front and crown with a distinctly longer back section.
+- Strong contrast between the shorter front/sides and longer back.
+- Do not turn it into a generic shag.
+`;
+
+    case "wolf-cut":
+      return `
+FEMALE WOLF CUT:
+- Clearly recognizable wolf cut.
+- Short, voluminous, heavily layered crown and front transitioning into noticeably longer, textured lengths.
+- Strong choppy layering and a distinct wolf-cut silhouette.
+- Do not reduce it to a generic shag or simple layers.
+`;
+
+    case "long-butterfly":
+      return `
+FEMALE LONG BUTTERFLY:
+- Clearly recognizable long butterfly haircut.
+- Prominent shorter face-framing and crown layers flowing into substantially longer lower lengths.
+- Strong airy volume and visible face-framing layers.
+- Preserve clearly long overall hair.
+`;
+
+    case "long-cascade":
+      return `
+FEMALE LONG CASCADE:
+- Clearly recognizable long cascading haircut.
+- Multiple visible layers, with shorter upper and front sections progressively transitioning into much longer lower sections.
+- Preserve clearly long overall length.
+- Do not turn it into a one-length long haircut.
 `;
 
     default:
       return "";
   }
 }
-
 /* =========================================================
    COLOR
    ========================================================= */
@@ -937,7 +1097,17 @@ function validateVariant(
         VALID_FEMALE_FORMS
       )
     ) {
-      return "Некорректно выбрана форма женской стрижки.";
+      return "Некорректно выбрана стрижка.";
+    }
+
+    if (
+      femaleForm !== "ai" &&
+      (!FEMALE_HAIRCUTS_BY_LENGTH[length] ||
+        !FEMALE_HAIRCUTS_BY_LENGTH[length].includes(
+          femaleForm
+        ))
+    ) {
+      return "Выбранная стрижка не соответствует выбранной длине.";
     }
 
     if (
