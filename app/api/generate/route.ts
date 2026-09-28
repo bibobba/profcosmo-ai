@@ -2012,8 +2012,8 @@ export async function POST(
                 {
                   apiKey,
                   image,
-                  prompt:
-                    job.prompt,
+                  prompt: job.prompt,
+                  paletteReference: job.paletteReference,
                 }
               );
 
