@@ -1311,6 +1311,8 @@ async function streamOneVariant(params: {
   openAIForm.append("stream", "true");
   openAIForm.append("partial_images", "2");
 
+  console.log("[PROFCOSMO] OpenAI request starting");
+
   const response = await fetch(
     OPENAI_API_URL,
     {
@@ -1321,6 +1323,11 @@ async function streamOneVariant(params: {
       body: openAIForm,
     }
   );
+
+  console.log("[PROFCOSMO] OpenAI headers received", {
+    status: response.status,
+    contentType: response.headers.get("content-type"),
+  });
 
   if (!response.ok) {
     const text = await response.text();
@@ -1377,6 +1384,10 @@ async function streamOneVariant(params: {
         "image_edit.partial_image" &&
       typeof event.b64_json === "string"
     ) {
+      console.log("[PROFCOSMO] partial image received", {
+        partialIndex: event.partial_image_index,
+        bytesBase64: event.b64_json.length,
+      });
       onPartial(event.b64_json);
     }
 
@@ -1385,6 +1396,9 @@ async function streamOneVariant(params: {
         "image_edit.completed" &&
       typeof event.b64_json === "string"
     ) {
+      console.log("[PROFCOSMO] final image received", {
+        bytesBase64: event.b64_json.length,
+      });
       finalBase64 = event.b64_json;
     }
   };
@@ -1910,6 +1924,11 @@ export async function POST(
        BUILD PARAMETERS
     ----------------------------------------------------- */
 
+    console.log("[PROFCOSMO] request accepted", {
+      variants: variants.length,
+      colorMode,
+    });
+
     const jobs =
       variants.map(
         (
@@ -2054,6 +2073,10 @@ export async function POST(
       new ReadableStream({
         start(controller) {
           const send = (payload: any) => {
+            console.log("[PROFCOSMO] SSE -> browser", {
+              type: payload?.type,
+              index: payload?.index,
+            });
             controller.enqueue(
               encoder.encode(
                 `data: ${JSON.stringify(payload)}\n\n`
