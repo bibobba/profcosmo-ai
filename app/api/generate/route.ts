@@ -1273,32 +1273,25 @@ function validateColor(
    OPENAI
    ========================================================= */
 
-async function generateOneVariant(params: {
+async function streamOneVariant(params: {
   apiKey: string;
   image: File;
   prompt: string;
   paletteReference?: File | null;
+  onPartial: (base64Image: string) => void;
 }) {
   const {
     apiKey,
     image,
     prompt,
     paletteReference,
+    onPartial,
   } = params;
 
-  const openAIForm =
-    new FormData();
+  const openAIForm = new FormData();
 
-  openAIForm.append(
-    "model",
-    "gpt-image-2"
-  );
-
-  openAIForm.append(
-    "image[]",
-    image,
-    image.name
-  );
+  openAIForm.append("model", "gpt-image-2");
+  openAIForm.append("image[]", image, image.name);
 
   if (paletteReference) {
     openAIForm.append(
@@ -1308,79 +1301,128 @@ async function generateOneVariant(params: {
     );
   }
 
-  openAIForm.append(
-    "prompt",
-    prompt
+  openAIForm.append("prompt", prompt);
+  openAIForm.append("size", "1024x1536");
+  openAIForm.append("quality", "high");
+  openAIForm.append("output_format", "jpeg");
+  openAIForm.append("output_compression", "95");
+  openAIForm.append("stream", "true");
+  openAIForm.append("partial_images", "2");
+
+  const response = await fetch(
+    OPENAI_API_URL,
+    {
+      method: "POST",
+      headers: {
+        Authorization: \`Bearer \${apiKey}\`,
+      },
+      body: openAIForm,
+    }
   );
-
-  openAIForm.append(
-    "size",
-    "1024x1536"
-  );
-
-  openAIForm.append(
-    "quality",
-    "high"
-  );
-
-  openAIForm.append(
-    "output_format",
-    "jpeg"
-  );
-
-  openAIForm.append(
-    "output_compression",
-    "95"
-  );
-
-  const response =
-    await fetch(
-      OPENAI_API_URL,
-      {
-        method: "POST",
-        headers: {
-          Authorization:
-            `Bearer ${apiKey}`,
-        },
-        body: openAIForm,
-      }
-    );
-
-  const text =
-    await response.text();
-
-  let data: any;
-
-  try {
-    data =
-      JSON.parse(text);
-  } catch {
-    throw new Error(
-      "OpenAI вернул некорректный ответ."
-    );
-  }
 
   if (!response.ok) {
+    const text = await response.text();
+    let data: any;
+
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
+
     throw new Error(
       data?.error?.message ||
         "Ошибка OpenAI Image API."
     );
   }
 
-  const base64Image =
-    data?.data?.[0]?.b64_json;
-
-  if (
-    typeof base64Image !==
-      "string" ||
-    base64Image.length === 0
-  ) {
+  if (!response.body) {
     throw new Error(
-      "OpenAI не вернул изображение."
+      "OpenAI не вернул поток генерации."
     );
   }
 
-  return base64Image;
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalBase64 = "";
+
+  const processEvent = (block: string) => {
+    const dataLines = block
+      .split("\n")
+      .filter((line) =>
+        line.startsWith("data:")
+      )
+      .map((line) =>
+        line.slice(5).trim()
+      );
+
+    if (dataLines.length === 0) return;
+
+    const dataText = dataLines.join("\n");
+    if (dataText === "[DONE]") return;
+
+    let event: any;
+
+    try {
+      event = JSON.parse(dataText);
+    } catch {
+      return;
+    }
+
+    if (
+      event?.type ===
+        "image_edit.partial_image" &&
+      typeof event.b64_json === "string"
+    ) {
+      onPartial(event.b64_json);
+    }
+
+    if (
+      event?.type ===
+        "image_edit.completed" &&
+      typeof event.b64_json === "string"
+    ) {
+      finalBase64 = event.b64_json;
+    }
+  };
+
+  while (true) {
+    const { value, done } =
+      await reader.read();
+
+    if (done) break;
+
+    buffer += decoder.decode(
+      value,
+      { stream: true }
+    );
+
+    const blocks = buffer.split(
+      /\r?\n\r?\n/
+    );
+
+    buffer =
+      blocks.pop() || "";
+
+    for (const block of blocks) {
+      processEvent(block);
+    }
+  }
+
+  buffer += decoder.decode();
+
+  if (buffer.trim()) {
+    processEvent(buffer);
+  }
+
+  if (!finalBase64) {
+    throw new Error(
+      "OpenAI не вернул финальное изображение."
+    );
+  }
+
+  return finalBase64;
 }
 
 function hexToRgb(hex: string) {
@@ -2000,89 +2042,103 @@ export async function POST(
       );
 
     /* -----------------------------------------------------
-       GENERATE ALL VARIANTS IN PARALLEL
+       STREAM ALL VARIANTS
     ----------------------------------------------------- */
 
-    const generatedImages =
-      await Promise.all(
-        jobs.map(
-          async (job) => {
-            const base64Image =
-              await generateOneVariant(
-                {
-                  apiKey,
-                  image,
-                  prompt: job.prompt,
-                  paletteReference: job.paletteReference,
-                }
+    const encoder =
+      new TextEncoder();
+
+    const stream =
+      new ReadableStream({
+        start(controller) {
+          const send = (payload: any) => {
+            controller.enqueue(
+              encoder.encode(
+                \`data: \${JSON.stringify(payload)}\n\n\`
+              )
+            );
+          };
+
+          void (async () => {
+            try {
+              send({
+                type: "started",
+                count: jobs.length,
+              });
+
+              await Promise.all(
+                jobs.map(async (job) => {
+                  try {
+                    const finalBase64 =
+                      await streamOneVariant({
+                        apiKey,
+                        image,
+                        prompt: job.prompt,
+                        paletteReference:
+                          job.paletteReference,
+                        onPartial: (
+                          partialBase64
+                        ) => {
+                          send({
+                            type: "partial",
+                            index: job.index,
+                            src:
+                              \`data:image/jpeg;base64,\${partialBase64}\`,
+                          });
+                        },
+                      });
+
+                    const url =
+                      await createSignedBlobUrl(
+                        finalBase64,
+                        job.index + 1
+                      );
+
+                    send({
+                      type: "complete",
+                      index: job.index,
+                      url,
+                    });
+                  } catch (error) {
+                    send({
+                      type: "variant_error",
+                      index: job.index,
+                      error:
+                        error instanceof Error
+                          ? error.message
+                          : "Ошибка генерации варианта.",
+                    });
+                  }
+                })
               );
 
-            return {
-              index:
-                job.index,
-              base64Image,
-            };
-          }
-        )
-      );
-
-    /* -----------------------------------------------------
-       SAVE ALL IMAGES TO PRIVATE BLOB
-    ----------------------------------------------------- */
-
-    const imageUrls =
-      await Promise.all(
-        generatedImages.map(
-          async (
-            item
-          ) => {
-            const url =
-              await createSignedBlobUrl(
-                item.base64Image,
-                item.index + 1
-              );
-
-            return {
-              index:
-                item.index,
-              url,
-            };
-          }
-        )
-      );
-
-    imageUrls.sort(
-      (a, b) =>
-        a.index - b.index
-    );
-
-    const results =
-      imageUrls.map(
-        (item) =>
-          item.url
-      );
-
-    if (
-      results.length ===
-      0
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Не удалось сохранить результаты изображений.",
+              send({
+                type: "done",
+              });
+            } catch (error) {
+              send({
+                type: "error",
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Неизвестная ошибка сервера.",
+              });
+            } finally {
+              controller.close();
+            }
+          })();
         },
-        {
-          status: 502,
-        }
-      );
-    }
+      });
 
-    return NextResponse.json({
-      success: true,
-      count:
-        results.length,
-      results,
+    return new Response(stream, {
+      headers: {
+        "Content-Type":
+          "text/event-stream; charset=utf-8",
+        "Cache-Control":
+          "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
     });
   } catch (error) {
     console.error(
