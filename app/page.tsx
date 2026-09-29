@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PalettePicker } from "@/components/PalettePicker";
+import { BeforeAfter } from "@/components/BeforeAfter";
 
 type Option = {
   value: string;
@@ -463,6 +464,7 @@ export default function Home() {
   const [sharedColor, setSharedColor] = useState<ColorSettings>(createDefaultColor());
   const [individualColors, setIndividualColors] = useState<ColorSettings[]>([createDefaultColor()]);
   const [resultImages, setResultImages] = useState<string[]>([]);
+  const [streamingImages, setStreamingImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState("");
@@ -598,16 +600,30 @@ export default function Home() {
       return;
     }
 
-    const colors = colorMode === "shared" ? variants.map(() => sharedColor) : individualColors;
+    const colors =
+      colorMode === "shared"
+        ? variants.map(() => sharedColor)
+        : individualColors;
 
     for (const color of colors) {
-      if (color.coloring !== "none" && !color.colorDepth) {
-        setError("Для окрашивания выберите уровень тона.");
+      if (
+        color.coloring !== "none" &&
+        !color.colorDepth
+      ) {
+        setError(
+          "Для окрашивания выберите уровень тона."
+        );
         return;
       }
 
-      if (color.coloring !== "none" && !color.colorCode && !color.colorShade) {
-        setError("Выберите оттенок: простой вариант или точный код в профессиональной палитре.");
+      if (
+        color.coloring !== "none" &&
+        !color.colorCode &&
+        !color.colorShade
+      ) {
+        setError(
+          "Выберите оттенок: простой вариант или точный код в профессиональной палитре."
+        );
         return;
       }
     }
@@ -616,49 +632,218 @@ export default function Home() {
     setLoadingStep(0);
     setError("");
     setResultImages([]);
+    setStreamingImages(
+      Array(variants.length).fill("")
+    );
 
     try {
       const formData = new FormData();
 
       formData.append("image", image);
       formData.append("gender", gender);
-      formData.append("variants", JSON.stringify(variants));
-      formData.append("colorMode", colorMode);
-      formData.append("sharedColorDepth", sharedColor.colorDepth);
-      formData.append("sharedColorShade", sharedColor.colorShade);
-      formData.append("sharedColoring", sharedColor.coloring);
-      formData.append("sharedColorCode", sharedColor.colorCode);
-      formData.append("individualColors", JSON.stringify(individualColors));
+      formData.append(
+        "variants",
+        JSON.stringify(variants)
+      );
+      formData.append(
+        "colorMode",
+        colorMode
+      );
+      formData.append(
+        "sharedColorDepth",
+        sharedColor.colorDepth
+      );
+      formData.append(
+        "sharedColorShade",
+        sharedColor.colorShade
+      );
+      formData.append(
+        "sharedColoring",
+        sharedColor.coloring
+      );
+      formData.append(
+        "sharedColorCode",
+        sharedColor.colorCode
+      );
+      formData.append(
+        "individualColors",
+        JSON.stringify(
+          individualColors
+        )
+      );
 
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        "/api/generate",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
-      let data: {
-        success?: boolean;
-        results?: string[];
-        count?: number;
-        error?: string;
+      if (!response.ok) {
+        let message =
+          \`Не удалось запустить генерацию. Код: \${response.status}\`;
+
+        try {
+          const data =
+            await response.json();
+          message =
+            data.error || message;
+        } catch {}
+
+        throw new Error(message);
+      }
+
+      if (!response.body) {
+        throw new Error(
+          "Сервер не вернул поток генерации."
+        );
+      }
+
+      const reader =
+        response.body.getReader();
+      const decoder =
+        new TextDecoder();
+      let buffer = "";
+
+      const updateStreamingImage = (
+        index: number,
+        src: string
+      ) => {
+        setStreamingImages(
+          (current) => {
+            const next = [...current];
+            next[index] = src;
+            return next;
+          }
+        );
       };
 
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error(`Сервер вернул некорректный ответ. Код: ${response.status}`);
+      const processEvent = (
+        block: string
+      ) => {
+        const dataLines = block
+          .split("\n")
+          .filter((line) =>
+            line.startsWith("data:")
+          )
+          .map((line) =>
+            line.slice(5).trim()
+          );
+
+        if (dataLines.length === 0)
+          return;
+
+        const dataText =
+          dataLines.join("\n");
+
+        if (dataText === "[DONE]")
+          return;
+
+        let event: {
+          type?: string;
+          index?: number;
+          src?: string;
+          url?: string;
+          error?: string;
+        };
+
+        try {
+          event = JSON.parse(
+            dataText
+          );
+        } catch {
+          return;
+        }
+
+        if (
+          event.type === "partial" &&
+          typeof event.index === "number" &&
+          event.src
+        ) {
+          updateStreamingImage(
+            event.index,
+            event.src
+          );
+          return;
+        }
+
+        if (
+          event.type === "complete" &&
+          typeof event.index === "number" &&
+          event.url
+        ) {
+          updateStreamingImage(
+            event.index,
+            event.url
+          );
+
+          setResultImages(
+            (current) => {
+              const next = [...current];
+              next[event.index!] =
+                event.url!;
+              return next;
+            }
+          );
+          return;
+        }
+
+        if (
+          event.type ===
+            "variant_error" &&
+          event.error
+        ) {
+          setError(
+            event.error
+          );
+        }
+
+        if (
+          event.type === "error" &&
+          event.error
+        ) {
+          throw new Error(
+            event.error
+          );
+        }
+      };
+
+      while (true) {
+        const { value, done } =
+          await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(
+          value,
+          { stream: true }
+        );
+
+        const blocks =
+          buffer.split(
+            /\r?\n\r?\n/
+          );
+
+        buffer =
+          blocks.pop() || "";
+
+        for (const block of blocks) {
+          processEvent(block);
+        }
       }
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || `Не удалось создать варианты прически. Код: ${response.status}`);
-      }
+      buffer += decoder.decode();
 
-      if (!Array.isArray(data.results) || data.results.length === 0) {
-        throw new Error("AI не вернул изображения.");
+      if (buffer.trim()) {
+        processEvent(buffer);
       }
-
-      setResultImages(data.results);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Произошла ошибка при генерации.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Произошла ошибка при генерации."
+      );
     } finally {
       setLoading(false);
     }
@@ -1012,20 +1197,33 @@ export default function Home() {
           {error ? <p className="error">{error}</p> : null}
         </section>
 
-        {resultImages.length > 0 ? (
+        {streamingImages.some(Boolean) ? (
           <section className="card results">
             <h2>Результаты</h2>
             <p className="results-description">
-              Каждый вариант создан отдельно по выбранным параметрам.
+              Двигайте ползунок, чтобы сравнить исходное фото и результат.
             </p>
 
             <div className="results-grid">
-              {resultImages.map((src, index) => (
-                <div className="result" key={`${src}-${index}`}>
-                  <div className="result-number">Вариант {index + 1}</div>
-                  <img src={src} alt={`Вариант прически ${index + 1}`} />
-                </div>
-              ))}
+              {streamingImages.map((src, index) =>
+                src ? (
+                  <div
+                    className="result"
+                    key={"stream-" + index}
+                  >
+                    <div className="result-number">
+                      Вариант {index + 1}
+                      {resultImages[index]
+                        ? " · готово"
+                        : " · генерируется"}
+                    </div>
+                    <BeforeAfter
+                      before={preview}
+                      after={src}
+                    />
+                  </div>
+                ) : null
+              )}
             </div>
           </section>
         ) : null}
