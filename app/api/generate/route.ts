@@ -2118,13 +2118,9 @@ export async function POST(
                       },
                     });
 
-                  send({
-                    type: "complete",
-                    index: job.index,
-                    src:
-                      `data:image/jpeg;base64,${finalBase64}`,
-                  });
-
+                  // Store the final image first, then send only its URL to the browser.
+                  // This avoids pushing a large Base64 JPEG through SSE, which is fragile
+                  // on slow or unstable connections.
                   try {
                     const url =
                       await createSignedBlobUrl(
