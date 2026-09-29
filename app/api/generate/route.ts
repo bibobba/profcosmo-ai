@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { PALETTE } from "@/lib/palette";
 import { deflateSync } from "node:zlib";
 import sharp from "sharp";
-import Replicate from "replicate";
+import * as ort from "onnxruntime-node";
 import {
   put,
   issueSignedToken,
@@ -1607,86 +1607,179 @@ async function prepareSourceImage(image: File) {
  * protect the face/ears with deterministic geometry. The geometry is only
  * an expansion zone for new hair; it is not used as the primary hair mask.
  */
-const HAIR_SEGMENT_MODEL =
-  "hadilq/hair-segment:b335dc1b693b2de88040736eb426702adfc2f0c869ae9dba3569bac1beb9c0f6";
+const HAIR_PARSER_MODEL_URL =
+  "https://huggingface.co/yakhyo/uniface-weights/resolve/main/parsing_resnet18.onnx";
+const HAIR_PARSER_MODEL_PATH =
+  "/tmp/profcosmo-parsing-resnet18.onnx";
+const HAIR_CLASS_INDEX = 17; // yakhyo/CelebAMask-HQ: hair
+
+let hairParserSessionPromise: Promise<ort.InferenceSession> | null = null;
+let hairParserModelPromise: Promise<Buffer> | null = null;
+
+async function loadHairParserModel() {
+  if (!hairParserModelPromise) {
+    hairParserModelPromise = (async () => {
+      try {
+        const existing = await sharp(HairParserModelPathPlaceholder()).metadata();
+        void existing;
+      } catch {
+        // The ONNX file is stored in /tmp between warm invocations.
+      }
+
+      try {
+        const fs = await import("node:fs/promises");
+        const existing = await fs.stat(HAIR_PARSER_MODEL_PATH);
+        if (existing.size > 1_000_000) {
+          return fs.readFile(HAIR_PARSER_MODEL_PATH);
+        }
+      } catch {
+        // First invocation or stale/missing file.
+      }
+
+      console.log("[PROFCOSMO] downloading local BiSeNet ONNX model");
+      const response = await fetch(HAIR_PARSER_MODEL_URL);
+      if (!response.ok) {
+        throw new Error(
+          `Не удалось загрузить модель сегментации волос: HTTP ${response.status}`
+        );
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length < 1_000_000) {
+        throw new Error("Файл модели сегментации волос поврежден или слишком мал.");
+      }
+
+      const fs = await import("node:fs/promises");
+      await fs.writeFile(HAIR_PARSER_MODEL_PATH, buffer);
+      console.log("[PROFCOSMO] BiSeNet ONNX model ready", {
+        megabytes: Math.round(buffer.length / 1024 / 1024),
+      });
+      return buffer;
+    })();
+  }
+
+  return hairParserModelPromise;
+}
+
+async function getHairParserSession() {
+  if (!hairParserSessionPromise) {
+    hairParserSessionPromise = (async () => {
+      const model = await loadHairParserModel();
+      const session = await ort.InferenceSession.create(model, {
+        executionProviders: ["cpu"],
+        graphOptimizationLevel: "all",
+      });
+      console.log("[PROFCOSMO] BiSeNet session ready", {
+        inputs: session.inputNames,
+        outputs: session.outputNames,
+      });
+      return session;
+    })();
+  }
+
+  return hairParserSessionPromise;
+}
 
 async function getHairSegmentation(
   sourceFile: File,
   width: number,
   height: number
 ) {
-  const token = process.env.REPLICATE_API_TOKEN;
-
-  if (!token) {
-    console.warn(
-      "[PROFCOSMO] REPLICATE_API_TOKEN is missing; using geometric hair mask fallback."
-    );
-    return null;
-  }
-
   const sourceBuffer = Buffer.from(
     await sourceFile.arrayBuffer()
   );
 
-  // Replicate accepts data URIs for image inputs. Keep this compact because
-  // the segmentation model itself works at 640x640.
-  let segmentationInput = await sharp(sourceBuffer)
-    // Use the same square geometry for input and returned mask. The model
-    // itself operates at 640x640, so this keeps the mask aligned when it is
-    // mapped back to the original aspect ratio.
-    .resize(640, 640, { fit: "fill" })
-    .jpeg({ quality: 72, mozjpeg: true })
-    .toBuffer();
-
-  if (segmentationInput.length >= 950_000) {
-    segmentationInput = await sharp(sourceBuffer)
-      .resize(576, 576, { fit: "fill" })
-      .jpeg({ quality: 58, mozjpeg: true })
-      .toBuffer();
-  }
-
-  const dataUri =
-    `data:image/jpeg;base64,${segmentationInput.toString("base64")}`;
-
-  const replicate = new Replicate({ auth: token });
-  const output: any = await replicate.run(
-    HAIR_SEGMENT_MODEL,
-    {
-      input: { image: dataUri },
-    }
-  );
-
-  const outputUrl =
-    typeof output === "string"
-      ? output
-      : typeof output?.url === "function"
-        ? output.url()
-        : null;
-
-  if (!outputUrl) {
-    throw new Error(
-      "Сегментация волос не вернула изображение маски."
-    );
-  }
-
-  const response = await fetch(outputUrl);
-  if (!response.ok) {
-    throw new Error(
-      `Не удалось скачать маску сегментации волос: HTTP ${response.status}`
-    );
-  }
-
-  const maskBuffer = Buffer.from(
-    await response.arrayBuffer()
-  );
-
-  return sharp(maskBuffer)
-    .resize(width, height, { fit: "fill" })
-    .grayscale()
-    .threshold(128)
-    .dilate(3)
+  const { data: rgb } = await sharp(sourceBuffer)
+    .resize(512, 512, { fit: "fill" })
+    .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
+
+  // yakhyo's BiSeNet preprocessing: RGB, [0..1], ImageNet normalization.
+  const mean = [0.485, 0.456, 0.406];
+  const std = [0.229, 0.224, 0.225];
+  const input = new Float32Array(1 * 3 * 512 * 512);
+
+  for (let i = 0; i < 512 * 512; i++) {
+    input[i] =
+      (rgb[i * 3] / 255 - mean[0]) / std[0];
+    input[512 * 512 + i] =
+      (rgb[i * 3 + 1] / 255 - mean[1]) / std[1];
+    input[2 * 512 * 512 + i] =
+      (rgb[i * 3 + 2] / 255 - mean[2]) / std[2];
+  }
+
+  const session = await getHairParserSession();
+  const inputName = session.inputNames[0];
+  const outputs = await session.run({
+    [inputName]: new ort.Tensor("float32", input, [1, 3, 512, 512]),
+  });
+
+  const output = outputs[session.outputNames[0]];
+  if (!output?.data || !output.dims) {
+    throw new Error("BiSeNet не вернул карту сегментации.");
+  }
+
+  const dims = output.dims.map(Number);
+  if (dims.length !== 4) {
+    throw new Error(
+      `Неожиданная форма выхода BiSeNet: [${dims.join(", ")}]`
+    );
+  }
+
+  const channels = dims[1];
+  const outHeight = dims[2];
+  const outWidth = dims[3];
+  if (channels <= HAIR_CLASS_INDEX) {
+    throw new Error(
+      `В выходе BiSeNet нет класса волос: каналов ${channels}.`
+    );
+  }
+
+  const values = output.data as Float32Array | number[];
+  const hairMask = Buffer.alloc(outWidth * outHeight);
+
+  for (let y = 0; y < outHeight; y++) {
+    for (let x = 0; x < outWidth; x++) {
+      const pixel = y * outWidth + x;
+      let bestClass = 0;
+      let bestScore = -Infinity;
+
+      for (let cls = 0; cls < channels; cls++) {
+        const score = Number(
+          values[cls * outHeight * outWidth + pixel]
+        );
+        if (score > bestScore) {
+          bestScore = score;
+          bestClass = cls;
+        }
+      }
+
+      hairMask[pixel] =
+        bestClass === HAIR_CLASS_INDEX ? 255 : 0;
+    }
+  }
+
+  // Keep the parser's pixel-accurate hair boundary, then add only a tiny
+  // 2px safety expansion for strands/anti-aliased edges.
+  return sharp(hairMask, {
+    raw: {
+      width: outWidth,
+      height: outHeight,
+      channels: 1,
+    },
+  })
+    .resize(width, height, {
+      fit: "fill",
+      kernel: "nearest",
+    })
+    .dilate(2)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+}
+
+function HairParserModelPathPlaceholder() {
+  return HAIR_PARSER_MODEL_PATH;
 }
 
 async function createHairMask(
@@ -1738,53 +1831,13 @@ async function createHairMask(
   if (segmentation) {
     const { data } = segmentation;
 
-    // The published model returns a hair mask image. Its background is
-    // expected to be dark; inspect the four corners defensively and invert
-    // when a provider-side polarity change is detected.
-    const cornerPoints = [
-      [0, 0],
-      [width - 1, 0],
-      [0, height - 1],
-      [width - 1, height - 1],
-    ];
-    const cornerValues = cornerPoints.map(
-      ([x, y]) => data[y * width + x]
-    );
-    const cornerMean =
-      cornerValues.reduce((sum, value) => sum + value, 0) /
-      cornerValues.length;
-    const invert = cornerMean > 128;
-
     for (let i = 0; i < data.length; i++) {
-      const hair = invert
-        ? data[i] < 128
-        : data[i] >= 128;
-      alpha[i] = hair ? 0 : 255;
-    }
-  } else {
-    // Safe fallback: only the head/hair zone is editable, while the face
-    // remains protected below.
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        if (
-          insideEllipse(
-            x,
-            y,
-            headCx,
-            headCy,
-            headRx,
-            headRy
-          )
-        ) {
-          alpha[y * width + x] = 0;
-        }
-      }
+      alpha[i] = data[i] >= 128 ? 0 : 255;
     }
   }
 
-  // Allow a controlled expansion around the existing scalp so short -> very
-  // short or different hair silhouettes do not get clipped at the old edge.
-  // The face ellipse is restored immediately afterwards.
+  // Allow controlled expansion around the scalp for a new haircut silhouette,
+  // while immediately protecting the face and ears.
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const inHead = insideEllipse(
@@ -1808,7 +1861,6 @@ async function createHairMask(
         alpha[y * width + x] = 0;
       }
 
-      // Ears sit outside the central face ellipse and must stay immutable.
       const leftEar = insideEllipse(
         x,
         y,
@@ -1832,9 +1884,8 @@ async function createHairMask(
     }
   }
 
-  // Do not open a large lower rectangle for long hair: that would expose
-  // clothing/background to the editor. Existing hair remains precisely
-  // segmented, while the head expansion zone handles silhouette changes.
+  // Never expose a large lower rectangle: it can make clothing/background
+  // editable. Existing long hair is covered by semantic segmentation.
   void gender;
   void longHair;
 
@@ -1860,7 +1911,6 @@ async function createHairMask(
     .png()
     .toBuffer();
 }
-
 
 /* =========================================================
    VERCEL BLOB
