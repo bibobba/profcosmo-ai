@@ -1309,7 +1309,7 @@ async function streamOneVariant(params: {
   openAIForm.append("output_format", "jpeg");
   openAIForm.append("output_compression", "95");
   openAIForm.append("stream", "true");
-  openAIForm.append("partial_images", "2");
+  openAIForm.append("partial_images", "1");
 
   console.log("[PROFCOSMO] OpenAI request starting");
 
@@ -2096,69 +2096,64 @@ export async function POST(
                 encoder.encode(" ".repeat(2048) + "\n\n")
               );
 
-              await Promise.all(
-                jobs.map(async (job) => {
+              // Generate variants one-by-one. This avoids sending several
+              // long image-edit streams through the same invocation at once and
+              // lets the first result reach the browser as soon as it is ready.
+              for (const job of jobs) {
+                try {
+                  const finalBase64 =
+                    await streamOneVariant({
+                      apiKey,
+                      image,
+                      prompt: job.prompt,
+                      paletteReference:
+                        job.paletteReference,
+                      onPartial: (partialBase64) => {
+                        send({
+                          type: "partial",
+                          index: job.index,
+                          src:
+                            `data:image/jpeg;base64,${partialBase64}`,
+                        });
+                      },
+                    });
+
+                  send({
+                    type: "complete",
+                    index: job.index,
+                    src:
+                      `data:image/jpeg;base64,${finalBase64}`,
+                  });
+
                   try {
-                    const finalBase64 =
-                      await streamOneVariant({
-                        apiKey,
-                        image,
-                        prompt: job.prompt,
-                        paletteReference:
-                          job.paletteReference,
-                        onPartial: (
-                          partialBase64
-                        ) => {
-                          send({
-                            type: "partial",
-                            index: job.index,
-                            src:
-                              `data:image/jpeg;base64,${partialBase64}`,
-                          });
-                        },
-                      });
-
-                    // Show the final image immediately. Blob storage is only a
-                    // persistence step and must not block the user-facing result.
-                    send({
-                      type: "complete",
-                      index: job.index,
-                      src:
-                        `data:image/jpeg;base64,${finalBase64}`,
-                    });
-
-                    // Persist the final image in the background path of the
-                    // same variant without delaying the browser result.
-                    try {
-                      const url =
-                        await createSignedBlobUrl(
-                          finalBase64,
-                          job.index + 1
-                        );
-
-                      send({
-                        type: "stored",
-                        index: job.index,
-                        url,
-                      });
-                    } catch (storageError) {
-                      console.error(
-                        "Blob storage error:",
-                        storageError
+                    const url =
+                      await createSignedBlobUrl(
+                        finalBase64,
+                        job.index + 1
                       );
-                    }
-                  } catch (error) {
+
                     send({
-                      type: "variant_error",
+                      type: "stored",
                       index: job.index,
-                      error:
-                        error instanceof Error
-                          ? error.message
-                          : "Ошибка генерации варианта.",
+                      url,
                     });
+                  } catch (storageError) {
+                    console.error(
+                      "Blob storage error:",
+                      storageError
+                    );
                   }
-                })
-              );
+                } catch (error) {
+                  send({
+                    type: "variant_error",
+                    index: job.index,
+                    error:
+                      error instanceof Error
+                        ? error.message
+                        : "Ошибка генерации варианта.",
+                  });
+                }
+              }
 
               send({
                 type: "done",
