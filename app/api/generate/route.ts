@@ -8,6 +8,8 @@ import {
 } from "@vercel/blob";
 
 export const maxDuration = 300;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const OPENAI_API_URL =
   "https://api.openai.com/v1/images/edits";
@@ -2066,6 +2068,11 @@ export async function POST(
                 count: jobs.length,
               });
 
+              // Force the first SSE chunk through proxies/buffers immediately.
+              controller.enqueue(
+                encoder.encode(" ".repeat(2048) + "\n\n")
+              );
+
               await Promise.all(
                 jobs.map(async (job) => {
                   try {
@@ -2088,17 +2095,35 @@ export async function POST(
                         },
                       });
 
-                    const url =
-                      await createSignedBlobUrl(
-                        finalBase64,
-                        job.index + 1
-                      );
-
+                    // Show the final image immediately. Blob storage is only a
+                    // persistence step and must not block the user-facing result.
                     send({
                       type: "complete",
                       index: job.index,
-                      url,
+                      src:
+                        `data:image/jpeg;base64,${finalBase64}`,
                     });
+
+                    // Persist the final image in the background path of the
+                    // same variant without delaying the browser result.
+                    try {
+                      const url =
+                        await createSignedBlobUrl(
+                          finalBase64,
+                          job.index + 1
+                        );
+
+                      send({
+                        type: "stored",
+                        index: job.index,
+                        url,
+                      });
+                    } catch (storageError) {
+                      console.error(
+                        "Blob storage error:",
+                        storageError
+                      );
+                    }
                   } catch (error) {
                     send({
                       type: "variant_error",
