@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PALETTE } from "@/lib/palette";
 import { deflateSync } from "node:zlib";
 import sharp from "sharp";
+import Replicate from "replicate";
 import {
   put,
   issueSignedToken,
@@ -1322,7 +1323,8 @@ async function streamOneVariant(params: {
     source.width,
     source.height,
     gender,
-    length
+    length,
+    source.file
   );
 
   const openAIForm = new FormData();
@@ -1595,85 +1597,263 @@ async function prepareSourceImage(image: File) {
 }
 
 /*
- * The mask is deliberately conservative:
- * - transparent = area where hair may be edited;
- * - opaque = area that should remain protected.
+ * Build a real RGBA edit mask.
+ * OpenAI edits only the fully transparent pixels of the mask.
+ * Therefore:
+ *   alpha = 0 -> editable hair area
+ *   alpha = 255 -> protected source pixels
  *
- * It is guidance, not a pixel-perfect segmentation. The prompt therefore
- * keeps the same absolute non-hair preservation rule.
+ * We first get a dedicated hair segmentation from Replicate and then
+ * protect the face/ears with deterministic geometry. The geometry is only
+ * an expansion zone for new hair; it is not used as the primary hair mask.
  */
+const HAIR_SEGMENT_MODEL =
+  "hadilq/hair-segment:b335dc1b693b2de88040736eb426702adfc2f0c869ae9dba3569bac1beb9c0f6";
+
+async function getHairSegmentation(
+  sourceFile: File,
+  width: number,
+  height: number
+) {
+  const token = process.env.REPLICATE_API_TOKEN;
+
+  if (!token) {
+    console.warn(
+      "[PROFCOSMO] REPLICATE_API_TOKEN is missing; using geometric hair mask fallback."
+    );
+    return null;
+  }
+
+  const sourceBuffer = Buffer.from(
+    await sourceFile.arrayBuffer()
+  );
+
+  // Replicate accepts data URIs for image inputs. Keep this compact because
+  // the segmentation model itself works at 640x640.
+  let segmentationInput = await sharp(sourceBuffer)
+    .resize(640, 640, { fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 72, mozjpeg: true })
+    .toBuffer();
+
+  if (segmentationInput.length >= 950_000) {
+    segmentationInput = await sharp(sourceBuffer)
+      .resize(576, 576, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 58, mozjpeg: true })
+      .toBuffer();
+  }
+
+  const dataUri =
+    `data:image/jpeg;base64,${segmentationInput.toString("base64")}`;
+
+  const replicate = new Replicate({ auth: token });
+  const output: any = await replicate.run(
+    HAIR_SEGMENT_MODEL,
+    {
+      input: { image: dataUri },
+    }
+  );
+
+  const outputUrl =
+    typeof output === "string"
+      ? output
+      : typeof output?.url === "function"
+        ? output.url()
+        : null;
+
+  if (!outputUrl) {
+    throw new Error(
+      "Сегментация волос не вернула изображение маски."
+    );
+  }
+
+  const response = await fetch(outputUrl);
+  if (!response.ok) {
+    throw new Error(
+      `Не удалось скачать маску сегментации волос: HTTP ${response.status}`
+    );
+  }
+
+  const maskBuffer = Buffer.from(
+    await response.arrayBuffer()
+  );
+
+  return sharp(maskBuffer)
+    .resize(width, height, { fit: "fill" })
+    .grayscale()
+    .threshold(128)
+    .dilate(3)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+}
+
 async function createHairMask(
   width: number,
   height: number,
   gender: string,
-  length: string
+  length: string,
+  sourceFile: File
 ) {
+  const segmentation = await getHairSegmentation(
+    sourceFile,
+    width,
+    height
+  );
+
   const portrait = height >= width;
   const longHair =
     length === "below-shoulders" ||
     length === "long";
 
-  const faceCx = 50;
-  const faceCy = portrait ? 43 : 46;
-  const faceRx = portrait ? 20 : 23;
-  const faceRy = portrait ? 23 : 25;
+  const faceCx = 0.50;
+  const faceCy = portrait ? 0.43 : 0.46;
+  const faceRx = portrait ? 0.20 : 0.23;
+  const faceRy = portrait ? 0.23 : 0.25;
 
-  const headCx = 50;
-  const headCy = portrait ? 29 : 30;
-  const headRx = portrait ? 39 : 43;
-  const headRy = portrait ? 31 : 34;
+  const headCx = 0.50;
+  const headCy = portrait ? 0.29 : 0.30;
+  const headRx = portrait ? 0.39 : 0.43;
+  const headRy = portrait ? 0.31 : 0.34;
 
-  const sideRx = portrait ? 44 : 47;
+  const alpha = Buffer.alloc(
+    width * height,
+    255
+  );
 
-  /*
-   * OpenAI image-edit masks use transparency for the editable region.
-   * Start fully opaque (protected), then cut transparent "hair" regions.
-   */
-  const svg = `
-<svg xmlns="http://www.w3.org/2000/svg"
-     width="${width}" height="${height}"
-     viewBox="0 0 ${width} ${height}">
-  <rect width="100%" height="100%" fill="white"/>
+  const insideEllipse = (
+    x: number,
+    y: number,
+    cx: number,
+    cy: number,
+    rx: number,
+    ry: number
+  ) => {
+    const dx = (x / width - cx) / rx;
+    const dy = (y / height - cy) / ry;
+    return dx * dx + dy * dy <= 1;
+  };
 
-  <ellipse
-    cx="${headCx}%"
-    cy="${headCy}%"
-    rx="${headRx}%"
-    ry="${headRy}%"
-    fill="black"/>
+  if (segmentation) {
+    const { data } = segmentation;
 
-  <ellipse
-    cx="12%"
-    cy="44%"
-    rx="${sideRx / 2}%"
-    ry="${longHair ? 34 : 23}%"
-    fill="black"/>
+    // The published model returns a hair mask image. Its background is
+    // expected to be dark; inspect the four corners defensively and invert
+    // when a provider-side polarity change is detected.
+    const cornerPoints = [
+      [0, 0],
+      [width - 1, 0],
+      [0, height - 1],
+      [width - 1, height - 1],
+    ];
+    const cornerValues = cornerPoints.map(
+      ([x, y]) => data[y * width + x]
+    );
+    const cornerMean =
+      cornerValues.reduce((sum, value) => sum + value, 0) /
+      cornerValues.length;
+    const invert = cornerMean > 128;
 
-  <ellipse
-    cx="88%"
-    cy="44%"
-    rx="${sideRx / 2}%"
-    ry="${longHair ? 34 : 23}%"
-    fill="black"/>
+    for (let i = 0; i < data.length; i++) {
+      const hair = invert
+        ? data[i] < 128
+        : data[i] >= 128;
+      alpha[i] = hair ? 0 : 255;
+    }
+  } else {
+    // Safe fallback: only the head/hair zone is editable, while the face
+    // remains protected below.
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (
+          insideEllipse(
+            x,
+            y,
+            headCx,
+            headCy,
+            headRx,
+            headRy
+          )
+        ) {
+          alpha[y * width + x] = 0;
+        }
+      }
+    }
+  }
 
-  ${longHair ? `
-  <rect
-    x="5%"
-    y="${portrait ? 52 : 55}%"
-    width="90%"
-    height="${portrait ? 43 : 40}%"
-    fill="black"/>
-  ` : ""}
+  // Allow a controlled expansion around the existing scalp so short -> very
+  // short or different hair silhouettes do not get clipped at the old edge.
+  // The face ellipse is restored immediately afterwards.
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const inHead = insideEllipse(
+        x,
+        y,
+        headCx,
+        headCy,
+        headRx,
+        headRy
+      );
+      const inFace = insideEllipse(
+        x,
+        y,
+        faceCx,
+        faceCy,
+        faceRx,
+        faceRy
+      );
 
-  <ellipse
-    cx="${faceCx}%"
-    cy="${faceCy}%"
-    rx="${faceRx}%"
-    ry="${faceRy}%"
-    fill="white"/>
-</svg>`;
+      if (inHead && !inFace) {
+        alpha[y * width + x] = 0;
+      }
 
-  return sharp(Buffer.from(svg))
+      // Ears sit outside the central face ellipse and must stay immutable.
+      const leftEar = insideEllipse(
+        x,
+        y,
+        0.29,
+        0.44,
+        0.055,
+        0.09
+      );
+      const rightEar = insideEllipse(
+        x,
+        y,
+        0.71,
+        0.44,
+        0.055,
+        0.09
+      );
+
+      if (leftEar || rightEar) {
+        alpha[y * width + x] = 255;
+      }
+    }
+  }
+
+  // Do not open a large lower rectangle for long hair: that would expose
+  // clothing/background to the editor. Existing hair remains precisely
+  // segmented, while the head expansion zone handles silhouette changes.
+  void gender;
+  void longHair;
+
+  const rgba = Buffer.alloc(
+    width * height * 4
+  );
+
+  for (let i = 0; i < alpha.length; i++) {
+    const offset = i * 4;
+    rgba[offset] = 255;
+    rgba[offset + 1] = 255;
+    rgba[offset + 2] = 255;
+    rgba[offset + 3] = alpha[i];
+  }
+
+  return sharp(rgba, {
+    raw: {
+      width,
+      height,
+      channels: 4,
+    },
+  })
     .png()
     .toBuffer();
 }
