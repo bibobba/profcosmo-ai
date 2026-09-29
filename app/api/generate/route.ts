@@ -763,18 +763,16 @@ COLOR:
 
   return `
 COLOR:
-- Exact professional palette code: ${colorCode || "not selected"}.
-- Palette family: ${exactShade?.family || "not selected"}.
-- Coloring technique: ${techniqueDescription}.
-- Tone level: ${tone} — ${
-    toneDescription[tone] ||
-    "selected tone"
-  }.
-- Shade: ${
-    shadeDescription[shade] ||
-    "selected shade"
-  }.
-- The selected tone and shade must be visibly reflected in the hair.
+- EXACT PROFESSIONAL COLOR CODE: ${colorCode || "not selected"}.
+- Palette family label: ${exactShade?.family || "not selected"}.
+- COLORING TECHNIQUE: ${techniqueDescription}.
+- Tone level: ${tone} — ${toneDescription[tone] || "selected tone"}.
+- General shade direction: ${shadeDescription[shade] || "selected shade"}.
+- The exact code and the supplied palette swatch are the primary color references. Match their visible hue and tonal character as closely as possible.
+- Do not replace the selected code with a nearby, more familiar or aesthetically convenient shade.
+- The COLOR CODE determines the target tonal character; the COLORING TECHNIQUE determines where and how that color is distributed through the hair.
+- For BALAYAGE, SHATUSH, HIGHLIGHTING and AIRTOUCH, do not paint the entire head one uniform color unless explicitly required. Preserve a believable base and create visible dimensional lighter sections using the selected code as the target tone.
+- For SOLID COLOR and TONING, apply the selected tonal result consistently across the intended hair.
 - Keep the color realistic and professionally achievable.
 - Do not change skin tone.
 - Do not change eyebrows unless absolutely necessary for a realistic result.
@@ -868,13 +866,16 @@ HAIR EDITING:
 - Preserve realistic hairline and natural density.
 - Do not redraw the entire head or face when a localized hair edit is sufficient.
 
-HARD CONSTRAINTS:
+HARD CONSTRAINTS — FOLLOW LITERALLY:
+- Treat every selected parameter as an independent hard constraint, not as a suggestion.
 - The selected haircut form is mandatory.
 - The selected length is mandatory when provided.
 - The selected hair structure is mandatory.
-- The selected bangs/parting/volume/styling/ends are mandatory for female results.
+- The selected bangs, parting, volume, styling and ends are mandatory for female results.
 - The selected temple design is mandatory for male results.
-- The selected color parameters are mandatory.
+- The selected color technique and exact professional color code are mandatory when provided.
+- Do not improve, reinterpret, replace or omit a selected parameter because another hairstyle would look more aesthetically natural.
+- Do not let a general hairstyle prior override an explicit UI selection.
 
 Do not substitute a visually similar but different haircut.
 Do not mix several haircut types.
@@ -894,6 +895,17 @@ Do not change clothing, pose, background or lighting.
       colorShade,
       colorCode
     );
+
+  const femaleParameterRules = `
+FEMALE PARAMETER ENFORCEMENT:
+- LENGTH: ${getLengthDescription(length, "female")}. This controls the visible overall hair length. Do not make the result shorter or longer.
+- HAIR STRUCTURE: ${structureDescription}. Preserve this texture throughout the hairstyle. Do not silently convert wavy hair into straight hair or curls.
+- BANGS: ${bangs === "none" ? "NO BANGS. Keep the forehead and front hairline open; do not create a fringe." : bangs === "straight" ? "STRAIGHT BANGS. Create a clearly visible straight-across fringe with a deliberate horizontal lower edge." : bangs === "side" ? "SIDE BANGS. The fringe must sweep clearly to one side." : bangs === "long" ? "LONG BANGS. Create visibly long fringe sections that blend into the front layers." : bangs === "curtain" ? "CURTAIN BANGS. Create a clearly separated center-opening curtain fringe." : "SHORT BANGS. Create a clearly visible short fringe above the eyebrows."}
+- PARTING: ${parting === "none" ? "NO INTENTIONAL PART. Do not create a visible center, left or right part. The hair should fall naturally from the crown without a deliberate part line." : parting === "center" ? "CENTER PART. A clearly visible central part line is required." : parting === "left" ? "LEFT PART. A clearly visible part positioned on the person's left side is required." : "RIGHT PART. A clearly visible part positioned on the person's right side is required."}
+- VOLUME: ${volume === "low" ? "LOW VOLUME. Keep the silhouette close to the head." : volume === "natural" ? "NATURAL VOLUME. Keep realistic everyday volume without exaggerated lift." : volume === "medium" ? "MEDIUM VOLUME. Add clearly noticeable but controlled fullness." : "HIGH VOLUME. Create clearly visible substantial fullness and lift."}
+- STYLING: ${styling === "natural" ? "NATURAL STYLING. Hair should look naturally arranged, not heavily styled." : styling === "smooth" ? "SMOOTH STYLING. Hair should look deliberately smooth and controlled." : styling === "textured" ? "TEXTURED STYLING. Show deliberate strand separation and texture." : styling === "voluminous" ? "VOLUMINOUS STYLING. Emphasize lift and fullness." : styling === "messy" ? "MESSY STYLING. Create controlled intentionally undone texture." : "WET-EFFECT STYLING. Create a clearly visible wet-look finish."}
+- ENDS: ${ends === "straight" ? "STRAIGHT ENDS. The lower perimeter must have a visibly clean, straight-cut finish where the selected haircut allows it. Do not intentionally feather or heavily texture the ends." : ends === "textured" ? "TEXTURED ENDS. The lower perimeter must visibly show separation and texture." : "SOFT ENDS. The lower perimeter must have a soft, blended finish."}
+`;
 
   if (gender === "male") {
     return `
@@ -972,20 +984,7 @@ ${getFemaleFormDescription(
     femaleForm
   )}
 
-BANGS:
-- ${bangs}.
-
-PARTING:
-- ${parting}.
-
-VOLUME:
-- ${volume}.
-
-STYLING:
-- ${styling}.
-
-ENDS:
-- ${ends}.
+${femaleParameterRules}
 
 ${colorDescription}
 
@@ -1004,6 +1003,10 @@ Before producing the image, verify:
 11. Correct coloring: ${coloring}.
 12. If coloring is not "none", correct tone ${colorDepth} and shade ${colorShade}.
 13. No unrelated haircut.
+14. Every female parameter in FEMALE PARAMETER ENFORCEMENT is visibly satisfied.
+15. Do not add a visible center part when "NO INTENTIONAL PART" is selected.
+16. Do not turn the selected coloring technique into a uniform all-over color when a dimensional technique is selected.
+17. The exact professional color code must be visibly reflected in the hair.
 `;
 }
 
