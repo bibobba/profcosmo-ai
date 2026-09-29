@@ -745,7 +745,6 @@ export default function Home() {
           index?: number;
           src?: string;
           url?: string;
-          src?: string;
           error?: string;
         };
 
