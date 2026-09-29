@@ -274,9 +274,7 @@ function OptionGroup({
           <button
             key={option.value}
             type="button"
-            className={`option ${
-              value === option.value ? "option-active" : ""
-            }`}
+            className={`option ${value === option.value ? "option-active" : ""}`}
             onClick={() => onChange(option.value)}
           >
             {option.label}
@@ -292,15 +290,11 @@ function getVariantSummary(
   gender: "female" | "male"
 ): string {
   const structure =
-    structures.find(
-      (item) => item.value === variant.structure
-    )?.label || "";
+    structures.find((item) => item.value === variant.structure)?.label || "";
 
   if (gender === "female") {
     const length =
-      lengths.find(
-        (item) => item.value === variant.length
-      )?.label || "";
+      lengths.find((item) => item.value === variant.length)?.label || "";
 
     const form =
       femaleHaircutOptions(variant.length).find(
@@ -311,9 +305,7 @@ function getVariantSummary(
   }
 
   const form =
-    maleForms.find(
-      (item) => item.value === variant.maleForm
-    )?.label || "";
+    maleForms.find((item) => item.value === variant.maleForm)?.label || "";
 
   return `${form} · ${structure}`;
 }
@@ -325,15 +317,25 @@ function ColorSettingsBlock({
   color: ColorSettings;
   onChange: (changes: Partial<ColorSettings>) => void;
 }) {
+  const [selectionMode, setSelectionMode] = useState<"simple" | "professional">(
+    color.colorCode ? "professional" : "simple"
+  );
+
   const toneOptions =
-    color.coloring === "blond"
-      ? blondToneLevels
-      : allToneLevels;
+    color.coloring === "blond" ? blondToneLevels : allToneLevels;
 
   const availableShades =
-    color.colorDepth
-      ? shadesByTone[color.colorDepth] || []
-      : [];
+    color.colorDepth ? shadesByTone[color.colorDepth] || [] : [];
+
+  function changeSelectionMode(mode: "simple" | "professional") {
+    setSelectionMode(mode);
+
+    if (mode === "simple") {
+      onChange({ colorCode: "" });
+    } else {
+      onChange({ colorShade: "", colorCode: "" });
+    }
+  }
 
   function changeColoring(value: string) {
     if (value === "none") {
@@ -346,10 +348,7 @@ function ColorSettingsBlock({
       return;
     }
 
-    if (
-      value === "blond" &&
-      Number(color.colorDepth) < 7
-    ) {
+    if (value === "blond" && Number(color.colorDepth) < 7) {
       onChange({
         coloring: value,
         colorDepth: "7",
@@ -377,49 +376,77 @@ function ColorSettingsBlock({
 
       {color.coloring !== "none" ? (
         <>
-          <OptionGroup
-            title="Уровень тона"
-            options={toneOptions}
-            value={color.colorDepth}
-            onChange={(value) =>
-              onChange({
-                colorDepth: value,
-                colorShade: "",
-                colorCode: "",
-              })
-            }
-          />
-
-          {color.colorDepth ? (
-            <OptionGroup
-              title="Оттенок (общее направление)"
-              options={availableShades}
-              value={color.colorShade}
-              onChange={(value) =>
-                onChange({
-                  colorShade: value,
-                  colorCode: "",
-                })
-              }
-            />
-          ) : null}
-
           <div className="option-group">
-            <h3>Профессиональная палитра</h3>
-            <p style={{ margin: "-6px 0 12px", color: "#77736c", fontSize: 13 }}>
-              Выберите точный код из каталога. Код имеет приоритет над общим названием оттенка.
-            </p>
-            <PalettePicker
-              value={color.colorCode}
-              onChange={(entry) =>
-                onChange({
-                  colorCode: entry.code,
-                  colorDepth: entry.level ? String(entry.level) : color.colorDepth,
-                  colorShade: entry.family,
-                })
-              }
-            />
+            <h3>Способ выбора цвета</h3>
+
+            <div className="color-mode">
+              <button
+                type="button"
+                className={`color-mode-option ${selectionMode === "simple" ? "color-mode-active" : ""}`}
+                onClick={() => changeSelectionMode("simple")}
+              >
+                <strong>Простой выбор</strong>
+                <span>Уровень тона и общее направление цвета</span>
+              </button>
+
+              <button
+                type="button"
+                className={`color-mode-option ${selectionMode === "professional" ? "color-mode-active" : ""}`}
+                onClick={() => changeSelectionMode("professional")}
+              >
+                <strong>Профессиональная палитра</strong>
+                <span>Точный выбор оттенка по коду</span>
+              </button>
+            </div>
           </div>
+
+          {selectionMode === "simple" ? (
+            <>
+              <OptionGroup
+                title="Уровень тона"
+                options={toneOptions}
+                value={color.colorDepth}
+                onChange={(value) =>
+                  onChange({
+                    colorDepth: value,
+                    colorShade: "",
+                    colorCode: "",
+                  })
+                }
+              />
+
+              {color.colorDepth ? (
+                <OptionGroup
+                  title="Оттенок (общее направление)"
+                  options={availableShades}
+                  value={color.colorShade}
+                  onChange={(value) =>
+                    onChange({
+                      colorShade: value,
+                      colorCode: "",
+                    })
+                  }
+                />
+              ) : null}
+            </>
+          ) : (
+            <div className="option-group">
+              <h3>Профессиональная палитра</h3>
+              <p style={{ margin: "-6px 0 12px", color: "#77736c", fontSize: 13 }}>
+                Сначала уровень тона, затем точный оттенок по коду.
+              </p>
+              <PalettePicker
+                value={color.colorCode}
+                onChange={(entry) =>
+                  onChange({
+                    colorCode: entry.code,
+                    colorDepth: entry.level ? String(entry.level) : color.colorDepth,
+                    colorShade: entry.family,
+                  })
+                }
+              />
+            </div>
+          )}
         </>
       ) : null}
     </>
@@ -429,30 +456,13 @@ function ColorSettingsBlock({
 export default function Home() {
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
-
-  const [gender, setGender] =
-    useState<"female" | "male">("female");
-
-  const [variants, setVariants] = useState<Variant[]>([
-    createDefaultVariant(),
-  ]);
-
+  const [gender, setGender] = useState<"female" | "male">("female");
+  const [variants, setVariants] = useState<Variant[]>([createDefaultVariant()]);
   const [activeVariant, setActiveVariant] = useState(0);
-
-  const [colorMode, setColorMode] =
-    useState<"shared" | "individual">("shared");
-
-  const [sharedColor, setSharedColor] =
-    useState<ColorSettings>(createDefaultColor());
-
-  const [individualColors, setIndividualColors] =
-    useState<ColorSettings[]>([
-      createDefaultColor(),
-    ]);
-
-  const [resultImages, setResultImages] =
-    useState<string[]>([]);
-
+  const [colorMode, setColorMode] = useState<"shared" | "individual">("shared");
+  const [sharedColor, setSharedColor] = useState<ColorSettings>(createDefaultColor());
+  const [individualColors, setIndividualColors] = useState<ColorSettings[]>([createDefaultColor()]);
+  const [resultImages, setResultImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState("");
@@ -460,13 +470,7 @@ export default function Home() {
   const loadingMessages = [
     "Подготавливаем фотографию…",
     "Анализируем параметры…",
-    `Создаём ${variants.length} ${
-      variants.length === 1
-        ? "вариант"
-        : variants.length < 5
-        ? "варианта"
-        : "вариантов"
-    } прически…`,
+    `Создаём ${variants.length} ${variants.length === 1 ? "вариант" : variants.length < 5 ? "варианта" : "вариантов"} прически…`,
     "Сохраняем результаты…",
   ];
 
@@ -474,26 +478,20 @@ export default function Home() {
 
   const maleLengthVisible =
     gender === "male" &&
-    (currentVariant.maleForm === "undercut" ||
-      currentVariant.maleForm === "elongated");
+    (currentVariant.maleForm === "undercut" || currentVariant.maleForm === "elongated");
 
   useEffect(() => {
     if (!loading) return;
 
     const interval = setInterval(() => {
-      setLoadingStep(
-        (current) =>
-          (current + 1) % loadingMessages.length
-      );
+      setLoadingStep((current) => (current + 1) % loadingMessages.length);
     }, 2200);
 
     return () => clearInterval(interval);
   }, [loading, loadingMessages.length]);
 
   useEffect(() => {
-    if (individualColors.length === variants.length) {
-      return;
-    }
+    if (individualColors.length === variants.length) return;
 
     setIndividualColors((current) => {
       const next = [...current];
@@ -515,34 +513,18 @@ export default function Home() {
     setError("");
   }
 
-  function updateVariant(
-    index: number,
-    changes: Partial<Variant>
-  ) {
+  function updateVariant(index: number, changes: Partial<Variant>) {
     setVariants((current) =>
       current.map((variant, variantIndex) =>
-        variantIndex === index
-          ? {
-              ...variant,
-              ...changes,
-            }
-          : variant
+        variantIndex === index ? { ...variant, ...changes } : variant
       )
     );
   }
 
-  function updateIndividualColor(
-    index: number,
-    changes: Partial<ColorSettings>
-  ) {
+  function updateIndividualColor(index: number, changes: Partial<ColorSettings>) {
     setIndividualColors((current) =>
       current.map((color, colorIndex) =>
-        colorIndex === index
-          ? {
-              ...color,
-              ...changes,
-            }
-          : color
+        colorIndex === index ? { ...color, ...changes } : color
       )
     );
   }
@@ -550,16 +532,8 @@ export default function Home() {
   function addVariant() {
     if (variants.length >= 3) return;
 
-    setVariants((current) => [
-      ...current,
-      createDefaultVariant(),
-    ]);
-
-    setIndividualColors((current) => [
-      ...current,
-      createDefaultColor(),
-    ]);
-
+    setVariants((current) => [...current, createDefaultVariant()]);
+    setIndividualColors((current) => [...current, createDefaultColor()]);
     setActiveVariant(variants.length);
     setError("");
   }
@@ -567,80 +541,48 @@ export default function Home() {
   function removeVariant(index: number) {
     if (variants.length <= 1) return;
 
-    setVariants((current) =>
-      current.filter(
-        (_, variantIndex) => variantIndex !== index
-      )
-    );
-
-    setIndividualColors((current) =>
-      current.filter(
-        (_, colorIndex) => colorIndex !== index
-      )
-    );
+    setVariants((current) => current.filter((_, variantIndex) => variantIndex !== index));
+    setIndividualColors((current) => current.filter((_, colorIndex) => colorIndex !== index));
 
     setActiveVariant((current) => {
-      if (current > index) {
-        return current - 1;
-      }
-
-      if (
-        current === index &&
-        current >= variants.length - 1
-      ) {
+      if (current > index) return current - 1;
+      if (current === index && current >= variants.length - 1) {
         return Math.max(0, current - 1);
       }
-
       return current;
     });
 
     setError("");
   }
 
-  function changeGender(
-    nextGender: "female" | "male"
-  ) {
+  function changeGender(nextGender: "female" | "male") {
     setGender(nextGender);
-
-    setVariants([
-      createDefaultVariant(),
-    ]);
-
-    setIndividualColors([
-      createDefaultColor(),
-    ]);
-
+    setVariants([createDefaultVariant()]);
+    setIndividualColors([createDefaultColor()]);
     setActiveVariant(0);
     setResultImages([]);
     setError("");
   }
 
   function handleMaleFormChange(value: string) {
-    const changes: Partial<Variant> = {
-      maleForm: value,
-    };
+    const changes: Partial<Variant> = { maleForm: value };
 
-    if (
-      value !== "undercut" &&
-      value !== "elongated"
-    ) {
+    if (value !== "undercut" && value !== "elongated") {
       changes.length = "short";
     }
 
     updateVariant(activeVariant, changes);
   }
 
-  function generateColorLabel(
-    color: ColorSettings
-  ) {
-    if (color.coloring === "none") {
-      return "Без окрашивания";
-    }
+  function generateColorLabel(color: ColorSettings) {
+    if (color.coloring === "none") return "Без окрашивания";
 
     const technique =
-      coloringTechniques.find(
-        (item) => item.value === color.coloring
-      )?.label || "";
+      coloringTechniques.find((item) => item.value === color.coloring)?.label || "";
+
+    if (color.colorCode) {
+      return `${technique} · ${color.colorCode}`;
+    }
 
     const shade =
       shadesByTone[color.colorDepth]?.find(
@@ -656,29 +598,16 @@ export default function Home() {
       return;
     }
 
-    const colors =
-      colorMode === "shared"
-        ? variants.map(() => sharedColor)
-        : individualColors;
+    const colors = colorMode === "shared" ? variants.map(() => sharedColor) : individualColors;
 
     for (const color of colors) {
-      if (
-        color.coloring !== "none" &&
-        !color.colorDepth
-      ) {
-        setError(
-          "Для окрашивания выберите уровень тона."
-        );
+      if (color.coloring !== "none" && !color.colorDepth) {
+        setError("Для окрашивания выберите уровень тона.");
         return;
       }
 
-      if (
-        color.coloring !== "none" &&
-        !color.colorShade
-      ) {
-        setError(
-          "Для окрашивания выберите оттенок."
-        );
+      if (color.coloring !== "none" && !color.colorCode && !color.colorShade) {
+        setError("Выберите оттенок: простой вариант или точный код в профессиональной палитре.");
         return;
       }
     }
@@ -693,45 +622,18 @@ export default function Home() {
 
       formData.append("image", image);
       formData.append("gender", gender);
-      formData.append(
-        "variants",
-        JSON.stringify(variants)
-      );
-
+      formData.append("variants", JSON.stringify(variants));
       formData.append("colorMode", colorMode);
+      formData.append("sharedColorDepth", sharedColor.colorDepth);
+      formData.append("sharedColorShade", sharedColor.colorShade);
+      formData.append("sharedColoring", sharedColor.coloring);
+      formData.append("sharedColorCode", sharedColor.colorCode);
+      formData.append("individualColors", JSON.stringify(individualColors));
 
-      formData.append(
-        "sharedColorDepth",
-        sharedColor.colorDepth
-      );
-
-      formData.append(
-        "sharedColorShade",
-        sharedColor.colorShade
-      );
-
-      formData.append(
-        "sharedColoring",
-        sharedColor.coloring
-      );
-
-      formData.append(
-        "sharedColorCode",
-        sharedColor.colorCode
-      );
-
-      formData.append(
-        "individualColors",
-        JSON.stringify(individualColors)
-      );
-
-      const response = await fetch(
-        "/api/generate",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        body: formData,
+      });
 
       let data: {
         success?: boolean;
@@ -743,34 +645,20 @@ export default function Home() {
       try {
         data = await response.json();
       } catch {
-        throw new Error(
-          `Сервер вернул некорректный ответ. Код: ${response.status}`
-        );
+        throw new Error(`Сервер вернул некорректный ответ. Код: ${response.status}`);
       }
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.error ||
-            `Не удалось создать варианты прически. Код: ${response.status}`
-        );
+        throw new Error(data.error || `Не удалось создать варианты прически. Код: ${response.status}`);
       }
 
-      if (
-        !Array.isArray(data.results) ||
-        data.results.length === 0
-      ) {
-        throw new Error(
-          "AI не вернул изображения."
-        );
+      if (!Array.isArray(data.results) || data.results.length === 0) {
+        throw new Error("AI не вернул изображения.");
       }
 
       setResultImages(data.results);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Произошла ошибка при генерации."
-      );
+      setError(err instanceof Error ? err.message : "Произошла ошибка при генерации.");
     } finally {
       setLoading(false);
     }
@@ -779,7 +667,6 @@ export default function Home() {
   return (
     <main>
       <div className="container">
-
         <header className="header">
           <div>
             <h1>ПРОФКОСМО AI</h1>
@@ -787,42 +674,24 @@ export default function Home() {
           </div>
         </header>
 
-        {/* PHOTO */}
-
         <section className="card">
           <h2>1. Фотография</h2>
-
           <label className="upload">
             {preview ? (
-              <img
-                src={preview}
-                alt="Загруженная фотография"
-              />
+              <img src={preview} alt="Загруженная фотография" />
             ) : (
               <div>
-                <strong>
-                  Загрузить фотографию
-                </strong>
-
-                <span>
-                  Лучше использовать фото анфас
-                </span>
+                <strong>Загрузить фотографию</strong>
+                <span>Лучше использовать фото анфас</span>
               </div>
             )}
-
             <input
               type="file"
               accept="image/*"
-              onChange={(event) =>
-                handleImage(
-                  event.target.files?.[0] || null
-                )
-              }
+              onChange={(event) => handleImage(event.target.files?.[0] || null)}
             />
           </label>
         </section>
-
-        {/* HAIRSTYLE PARAMETERS */}
 
         <section className="card">
           <h2>2. Параметры прически</h2>
@@ -830,122 +699,77 @@ export default function Home() {
           <OptionGroup
             title="Пол"
             options={[
-              {
-                value: "female",
-                label: "Женская",
-              },
-              {
-                value: "male",
-                label: "Мужская",
-              },
+              { value: "female", label: "Женская" },
+              { value: "male", label: "Мужская" },
             ]}
             value={gender}
-            onChange={(value) =>
-              changeGender(
-                value as "female" | "male"
-              )
-            }
+            onChange={(value) => changeGender(value as "female" | "male")}
           />
-
-          {/* VARIANT CARDS */}
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(3, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
               gap: "12px",
               width: "100%",
               marginBottom: "30px",
             }}
           >
-            {variants.map(
-              (variant, index) => {
-                const active =
-                  activeVariant === index;
+            {variants.map((variant, index) => {
+              const active = activeVariant === index;
 
-                return (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() =>
-                      setActiveVariant(index)
-                    }
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setActiveVariant(index)}
+                  style={{
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    width: "100%",
+                    minWidth: 0,
+                    minHeight: "94px",
+                    boxSizing: "border-box",
+                    display: "block",
+                    padding: "16px",
+                    border: active ? "2px solid #d46925" : "1px solid #ddd8ce",
+                    borderRadius: "14px",
+                    background: active ? "#fff0e4" : "#faf9f6",
+                    color: "#24231f",
+                    textAlign: "left",
+                    fontFamily: "Arial, Helvetica, sans-serif",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    boxShadow: "none",
+                    margin: 0,
+                  }}
+                >
+                  <span
                     style={{
-                      appearance: "none",
-                      WebkitAppearance: "none",
-
-                      width: "100%",
-                      minWidth: 0,
-                      minHeight: "94px",
-
-                      boxSizing: "border-box",
-
                       display: "block",
-
-                      padding: "16px",
-
-                      border: active
-                        ? "2px solid #d46925"
-                        : "1px solid #ddd8ce",
-
-                      borderRadius: "14px",
-
-                      background: active
-                        ? "#fff0e4"
-                        : "#faf9f6",
-
-                      color: "#24231f",
-
-                      textAlign: "left",
-
-                      fontFamily:
-                        "Arial, Helvetica, sans-serif",
-
-                      cursor: "pointer",
-
-                      transition:
-                        "all 0.15s ease",
-
-                      boxShadow: "none",
-
-                      margin: 0,
+                      marginBottom: "8px",
+                      fontSize: "15px",
+                      lineHeight: "1.2",
+                      fontWeight: 700,
+                      color: active ? "#d46925" : "#24231f",
                     }}
                   >
-                    <span
-                      style={{
-                        display: "block",
-                        marginBottom: "8px",
-                        fontSize: "15px",
-                        lineHeight: "1.2",
-                        fontWeight: 700,
-                        color: active
-                          ? "#d46925"
-                          : "#24231f",
-                      }}
-                    >
-                      Вариант {index + 1}
-                    </span>
+                    Вариант {index + 1}
+                  </span>
 
-                    <span
-                      style={{
-                        display: "block",
-                        fontSize: "12px",
-                        lineHeight: "1.45",
-                        color: active
-                          ? "#665143"
-                          : "#77736c",
-                      }}
-                    >
-                      {getVariantSummary(
-                        variant,
-                        gender
-                      )}
-                    </span>
-                  </button>
-                );
-              }
-            )}
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "12px",
+                      lineHeight: "1.45",
+                      color: active ? "#665143" : "#77736c",
+                    }}
+                  >
+                    {getVariantSummary(variant, gender)}
+                  </span>
+                </button>
+              );
+            })}
 
             {variants.length < 3 ? (
               <button
@@ -954,39 +778,23 @@ export default function Home() {
                 style={{
                   appearance: "none",
                   WebkitAppearance: "none",
-
                   width: "100%",
                   minWidth: 0,
                   minHeight: "94px",
-
                   boxSizing: "border-box",
-
                   display: "flex",
-
                   alignItems: "center",
                   justifyContent: "center",
-
                   padding: "16px",
-
-                  border:
-                    "1px dashed #c9c2b8",
-
+                  border: "1px dashed #c9c2b8",
                   borderRadius: "14px",
-
                   background: "#fff",
-
                   color: "#77736c",
-
                   textAlign: "center",
-
-                  fontFamily:
-                    "Arial, Helvetica, sans-serif",
-
+                  fontFamily: "Arial, Helvetica, sans-serif",
                   fontSize: "14px",
                   fontWeight: 600,
-
                   cursor: "pointer",
-
                   margin: 0,
                 }}
               >
@@ -995,30 +803,18 @@ export default function Home() {
             ) : null}
           </div>
 
-          {/* ACTIVE VARIANT */}
-
           <div className="variant-editor">
             <div className="variant-editor-header">
               <div>
-                <h3>
-                  Вариант {activeVariant + 1}
-                </h3>
-
-                <p>
-                  Настройте параметры именно
-                  этого варианта
-                </p>
+                <h3>Вариант {activeVariant + 1}</h3>
+                <p>Настройте параметры именно этого варианта</p>
               </div>
 
               {variants.length > 1 ? (
                 <button
                   type="button"
                   className="variant-remove"
-                  onClick={() =>
-                    removeVariant(
-                      activeVariant
-                    )
-                  }
+                  onClick={() => removeVariant(activeVariant)}
                 >
                   Удалить вариант
                 </button>
@@ -1032,125 +828,73 @@ export default function Home() {
                   options={femaleLengths}
                   value={currentVariant.length}
                   onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        length: value,
-                        femaleForm: "ai-podbor",
-                      }
-                    )
+                    updateVariant(activeVariant, {
+                      length: value,
+                      femaleForm: "ai-podbor",
+                    })
                   }
                 />
 
                 <OptionGroup
                   title="Стрижка"
-                  options={femaleHaircutOptions(
-                    currentVariant.length
-                  )}
+                  options={femaleHaircutOptions(currentVariant.length)}
                   value={currentVariant.femaleForm}
                   onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        femaleForm: value,
-                      }
-                    )
+                    updateVariant(activeVariant, { femaleForm: value })
                   }
                 />
 
                 <OptionGroup
                   title="Структура волос"
                   options={structures}
-                  value={
-                    currentVariant.structure
-                  }
+                  value={currentVariant.structure}
                   onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        structure: value,
-                      }
-                    )
+                    updateVariant(activeVariant, { structure: value })
                   }
                 />
 
                 <OptionGroup
                   title="Чёлка"
                   options={femaleBangs}
-                  value={
-                    currentVariant.femaleBang
-                  }
+                  value={currentVariant.femaleBang}
                   onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        femaleBang: value,
-                      }
-                    )
+                    updateVariant(activeVariant, { femaleBang: value })
                   }
                 />
 
                 <OptionGroup
                   title="Пробор"
                   options={femalePartings}
-                  value={
-                    currentVariant.femaleParting
-                  }
+                  value={currentVariant.femaleParting}
                   onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        femaleParting: value,
-                      }
-                    )
+                    updateVariant(activeVariant, { femaleParting: value })
                   }
                 />
 
                 <OptionGroup
                   title="Объём"
                   options={volumes}
-                  value={
-                    currentVariant.femaleVolume
-                  }
+                  value={currentVariant.femaleVolume}
                   onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        femaleVolume: value,
-                      }
-                    )
+                    updateVariant(activeVariant, { femaleVolume: value })
                   }
                 />
 
                 <OptionGroup
                   title="Укладка"
                   options={stylings}
-                  value={
-                    currentVariant.femaleStyling
-                  }
+                  value={currentVariant.femaleStyling}
                   onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        femaleStyling: value,
-                      }
-                    )
+                    updateVariant(activeVariant, { femaleStyling: value })
                   }
                 />
 
                 <OptionGroup
                   title="Концы"
                   options={ends}
-                  value={
-                    currentVariant.femaleEnds
-                  }
+                  value={currentVariant.femaleEnds}
                   onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        femaleEnds: value,
-                      }
-                    )
+                    updateVariant(activeVariant, { femaleEnds: value })
                   }
                 />
               </>
@@ -1159,28 +903,17 @@ export default function Home() {
                 <OptionGroup
                   title="Форма"
                   options={maleForms}
-                  value={
-                    currentVariant.maleForm
-                  }
-                  onChange={
-                    handleMaleFormChange
-                  }
+                  value={currentVariant.maleForm}
+                  onChange={handleMaleFormChange}
                 />
 
                 {maleLengthVisible ? (
                   <OptionGroup
                     title="Длина"
                     options={lengths}
-                    value={
-                      currentVariant.length
-                    }
+                    value={currentVariant.length}
                     onChange={(value) =>
-                      updateVariant(
-                        activeVariant,
-                        {
-                          length: value,
-                        }
-                      )
+                      updateVariant(activeVariant, { length: value })
                     }
                   />
                 ) : null}
@@ -1188,32 +921,18 @@ export default function Home() {
                 <OptionGroup
                   title="Структура волос"
                   options={structures}
-                  value={
-                    currentVariant.structure
-                  }
+                  value={currentVariant.structure}
                   onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        structure: value,
-                      }
-                    )
+                    updateVariant(activeVariant, { structure: value })
                   }
                 />
 
                 <OptionGroup
                   title="Виски"
                   options={temples}
-                  value={
-                    currentVariant.maleTemples
-                  }
+                  value={currentVariant.maleTemples}
                   onChange={(value) =>
-                    updateVariant(
-                      activeVariant,
-                      {
-                        maleTemples: value,
-                      }
-                    )
+                    updateVariant(activeVariant, { maleTemples: value })
                   }
                 />
               </>
@@ -1221,52 +940,26 @@ export default function Home() {
           </div>
         </section>
 
-        {/* COLOR */}
-
         <section className="card">
           <h2>3. Цвет</h2>
 
           <div className="color-mode">
             <button
               type="button"
-              className={`color-mode-option ${
-                colorMode === "shared"
-                  ? "color-mode-active"
-                  : ""
-              }`}
-              onClick={() =>
-                setColorMode("shared")
-              }
+              className={`color-mode-option ${colorMode === "shared" ? "color-mode-active" : ""}`}
+              onClick={() => setColorMode("shared")}
             >
-              <strong>
-                Один цвет для всех
-              </strong>
-
-              <span>
-                Одинаковое окрашивание
-                для всех вариантов
-              </span>
+              <strong>Один цвет для всех</strong>
+              <span>Одинаковое окрашивание для всех вариантов</span>
             </button>
 
             <button
               type="button"
-              className={`color-mode-option ${
-                colorMode === "individual"
-                  ? "color-mode-active"
-                  : ""
-              }`}
-              onClick={() =>
-                setColorMode("individual")
-              }
+              className={`color-mode-option ${colorMode === "individual" ? "color-mode-active" : ""}`}
+              onClick={() => setColorMode("individual")}
             >
-              <strong>
-                Настроить отдельно
-              </strong>
-
-              <span>
-                Свой цвет для каждого
-                варианта
-              </span>
+              <strong>Настроить отдельно</strong>
+              <span>Свой цвет для каждого варианта</span>
             </button>
           </div>
 
@@ -1274,132 +967,68 @@ export default function Home() {
             <ColorSettingsBlock
               color={sharedColor}
               onChange={(changes) =>
-                setSharedColor(
-                  (current) => ({
-                    ...current,
-                    ...changes,
-                  })
-                )
+                setSharedColor((current) => ({ ...current, ...changes }))
               }
             />
           ) : (
             <div className="individual-colors">
-              {individualColors.map(
-                (color, index) => (
-                  <div
-                    key={index}
-                    className={`individual-color-card ${
-                      activeVariant === index
-                        ? "individual-color-active"
-                        : ""
-                    }`}
+              {individualColors.map((color, index) => (
+                <div
+                  key={index}
+                  className={`individual-color-card ${activeVariant === index ? "individual-color-active" : ""}`}
+                >
+                  <button
+                    type="button"
+                    className="individual-color-header"
+                    onClick={() => setActiveVariant(index)}
                   >
-                    <button
-                      type="button"
-                      className="individual-color-header"
-                      onClick={() =>
-                        setActiveVariant(index)
-                      }
-                    >
-                      <strong>
-                        Вариант {index + 1}
-                      </strong>
+                    <strong>Вариант {index + 1}</strong>
+                    <span>{generateColorLabel(color)}</span>
+                  </button>
 
-                      <span>
-                        {generateColorLabel(
-                          color
-                        )}
-                      </span>
-                    </button>
-
-                    <ColorSettingsBlock
-                      color={color}
-                      onChange={(changes) =>
-                        updateIndividualColor(
-                          index,
-                          changes
-                        )
-                      }
-                    />
-                  </div>
-                )
-              )}
+                  <ColorSettingsBlock
+                    color={color}
+                    onChange={(changes) => updateIndividualColor(index, changes)}
+                  />
+                </div>
+              ))}
             </div>
           )}
         </section>
-
-        {/* GENERATE */}
 
         <section className="card">
           {loading ? (
             <div className="loading">
               <div className="loading-spinner" />
-
-              <strong>
-                {loadingMessages[loadingStep]}
-              </strong>
-
-              <span>
-                Это может занять некоторое время
-              </span>
+              <strong>{loadingMessages[loadingStep]}</strong>
+              <span>Это может занять некоторое время</span>
             </div>
           ) : (
-            <button
-              className="generate"
-              type="button"
-              disabled={!image}
-              onClick={generate}
-            >
-              Подобрать{" "}
-              {variants.length === 1
-                ? "вариант"
-                : `${variants.length} варианта`}
+            <button className="generate" type="button" disabled={!image} onClick={generate}>
+              Подобрать {variants.length === 1 ? "вариант" : `${variants.length} варианта`}
             </button>
           )}
 
-          {error ? (
-            <p className="error">
-              {error}
-            </p>
-          ) : null}
+          {error ? <p className="error">{error}</p> : null}
         </section>
-
-        {/* RESULTS */}
 
         {resultImages.length > 0 ? (
           <section className="card results">
             <h2>Результаты</h2>
-
             <p className="results-description">
-              Каждый вариант создан
-              отдельно по выбранным
-              параметрам.
+              Каждый вариант создан отдельно по выбранным параметрам.
             </p>
 
             <div className="results-grid">
-              {resultImages.map(
-                (src, index) => (
-                  <div
-                    className="result"
-                    key={`${src}-${index}`}
-                  >
-                    <div className="result-number">
-                      Вариант {index + 1}
-                    </div>
-
-                    <img
-                      src={src}
-                      alt={`Вариант прически ${
-                        index + 1
-                      }`}
-                    />
-                  </div>
-                )
-              )}
+              {resultImages.map((src, index) => (
+                <div className="result" key={`${src}-${index}`}>
+                  <div className="result-number">Вариант {index + 1}</div>
+                  <img src={src} alt={`Вариант прически ${index + 1}`} />
+                </div>
+              ))}
             </div>
           </section>
         ) : null}
-
       </div>
     </main>
   );
