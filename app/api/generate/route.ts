@@ -846,57 +846,55 @@ function buildPrompt(params: {
 
   const common = `
 TASK:
-Edit the provided person's photograph and change ONLY the hairstyle and hair color according to the selected professional parameters.
+Edit the provided person's photograph. Change ONLY the hair according to the selected professional parameters.
 
-SOURCE IMAGE:
-- Treat the uploaded photograph as the primary identity and composition reference.
-- Perform a targeted hairstyle/hair-color edit rather than recreating a different person or scene.
+CRITICAL EDITING RULE:
+This is a HAIR-ONLY EDIT, not a portrait regeneration.
+The original person must remain the same person.
+The face must remain visually and geometrically unchanged.
+The hairstyle must be adapted to the existing person — NEVER adapt or redraw the person to fit the hairstyle.
 
-IDENTITY AND SOURCE IMAGE LOCK — HIGHEST PRIORITY:
-- The uploaded photograph is the source image. EDIT THIS PERSON; do not recreate a different person from scratch.
-- Preserve EXACTLY the same person's identity and recognizable facial structure.
-- Preserve the original face shape, facial proportions, eyes, eyebrows, nose, lips, mouth, jaw, chin, ears and skin texture.
-- Preserve the original skin tone, complexion, facial expression and apparent age.
-- DO NOT beautify, retouch, smooth, reshape, slim, widen, masculinize or feminize the face.
-- DO NOT alter facial symmetry or facial proportions.
-- Preserve EXACTLY the original body, shoulders, neck, hands, pose and visible anatomy.
-- Preserve EXACTLY the original clothing, neckline, straps, jewelry and accessories. DO NOT replace, recolor, redesign or invent clothing.
-- Preserve EXACTLY the original background and scene elements.
-- Preserve the original camera angle, framing, perspective, composition and lighting.
-- Outside the hair region, treat the source image as IMMUTABLE. No intentional changes are allowed anywhere outside the hair.
-- The ONLY intended edits are the selected haircut, hair shape, hair texture and hair color.
-- If a hairstyle request conflicts with identity preservation, preserve the identity and all non-hair content.
+SOURCE IMAGE LOCK — ABSOLUTE PRIORITY:
+- Use the uploaded photograph as the exact source for identity, face, body, clothing, pose, framing and scene.
+- Preserve the original face exactly: same face shape, facial proportions, forehead, cheekbones, eyes, eyebrows, nose, lips, mouth, teeth, jawline, chin, ears and skin.
+- The original face shape MUST NOT change from the source image. Do not make an oval face rounder, longer, narrower, wider, sharper or more angular.
+- Do not regenerate, reconstruct, beautify, retouch, smooth, reshape, slim, widen, masculinize, feminize or reinterpret the face.
+- Preserve the person's exact expression, apparent age and recognizable identity.
+- Preserve facial hair exactly where present. Do not add, remove or redesign beard, moustache or sideburns unless they are part of the selected HAIR region.
+- Preserve the original head position, camera angle, perspective, crop, framing and subject scale.
+- Preserve the original shoulders, neck, body, clothing, neckline, straps, jewelry and accessories.
+- Preserve the original background and every visible scene element.
+- Preserve the original lighting, shadows and overall photographic appearance.
+- Do not zoom in, zoom out, reframe, extend the canvas or change the aspect/composition.
+- Outside the hair region, treat the source pixels as immutable.
+- If changing the requested hairstyle would normally require changing the face, DO NOT change the face. Adapt the hairstyle to the existing face instead.
+- If any instruction conflicts with preservation of the source person, preservation wins.
 
-HAIR EDITING:
-- Change the hair realistically as if the person actually received this haircut and/or color.
-- Hair must grow naturally from the scalp.
-- Preserve realistic hairline and natural density.
-- Maintain realistic individual strands and texture.
-- The haircut must have professional barber/stylist geometry.
-- Do not add hair to the face.
-- Do not modify the ears, forehead or facial features except where naturally covered by the new hairstyle.
-- Preserve realistic hairline and natural density.
-- Do not redraw the entire head or face when a localized hair edit is sufficient.
+HAIR-ONLY EDITING:
+- Only the hair may be intentionally modified.
+- Change haircut shape, hair length, hair structure/texture, bangs, parting, volume, styling, ends and hair color according to the selected parameters.
+- Hair must grow naturally from the existing scalp and existing hairline.
+- Keep the person's original hairline and forehead geometry unless the selected bangs naturally cover part of it.
+- Do not alter the forehead, temples, ears, cheeks, jaw or chin to make the haircut fit.
+- Do not redraw the head.
+- Do not create a new person with a similar appearance.
+- Do not change the person's ethnicity, age, facial proportions or identity.
+- Make the smallest possible image change necessary to achieve the requested hair result.
 
-HARD CONSTRAINTS — FOLLOW LITERALLY:
-- Treat every selected parameter as an independent hard constraint, not as a suggestion.
-- The selected haircut form is mandatory.
-- The selected length is mandatory when provided.
-- The selected hair structure is mandatory.
-- The selected bangs, parting, volume, styling and ends are mandatory for female results.
-- The selected temple design is mandatory for male results.
-- The selected color technique and exact professional color code are mandatory when provided.
-- Do not improve, reinterpret, replace or omit a selected parameter because another hairstyle would look more aesthetically natural.
-- Do not let a general hairstyle prior override an explicit UI selection.
+HARD PARAMETER CONSTRAINTS:
+- Every selected UI parameter is a mandatory hard constraint, not a suggestion.
+- Do not replace, omit or reinterpret a selected haircut because another style seems more aesthetically natural.
+- Do not mix unrelated haircut types.
+- Do not let the model's generic hairstyle prior override an explicit UI selection.
+- Selected haircut form, length, structure, bangs, parting, volume, styling, ends, temple design, coloring technique, tone and professional shade code must be followed exactly when provided.
 
-Do not substitute a visually similar but different haircut.
-Do not mix several haircut types.
-Do not invent an unrelated hairstyle.
-DO NOT change clothing, pose, background, lighting, body or face.
-- DO NOT regenerate non-hair areas.
-- Do not introduce any new garment, accessory, facial feature or background object.
+FINAL PRIORITY ORDER:
+1. Preserve the exact original person, face and composition.
+2. Preserve all non-hair content.
+3. Apply the selected haircut geometry.
+4. Apply the selected hair structure and styling parameters.
+5. Apply the selected color technique and exact color.
 `;
-
   const structureDescription =
     getStructureDescription(
       structure
@@ -965,8 +963,12 @@ ${colorDescription}
 
 FINAL CHECK:
 Before producing the image, verify:
-1. EXACTLY the same person as the source image; face and identity are preserved.
-2. Clothing, body, pose, background and lighting are unchanged.
+1. EXACTLY the same person as the source image.
+2. The face shape and facial geometry are unchanged from the source.
+3. Eyes, eyebrows, nose, lips, mouth, jaw, chin, ears, skin and expression are unchanged.
+4. The original framing, crop, camera angle, perspective and subject scale are unchanged.
+5. Clothing, body, pose, background and lighting are unchanged.
+6. Only the hair has been intentionally edited.
 3. Male haircut.
 3. Correct selected form: ${maleForm}.
 4. Correct selected structure: ${structure}.
