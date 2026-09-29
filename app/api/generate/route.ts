@@ -1596,12 +1596,11 @@ async function prepareSourceImage(image: File) {
 
 /*
  * The mask is deliberately conservative:
- * - white/opaque = area where hair may be edited;
- * - transparent = area that should remain protected.
+ * - transparent = area where hair may be edited;
+ * - opaque = area that should remain protected.
  *
- * It is guidance, not a pixel-perfect segmentation. OpenAI explicitly
- * documents that masks guide the edit but may not be followed exactly.
- * The prompt therefore keeps the same absolute non-hair preservation rule.
+ * It is guidance, not a pixel-perfect segmentation. The prompt therefore
+ * keeps the same absolute non-hair preservation rule.
  */
 async function createHairMask(
   width: number,
@@ -1624,65 +1623,61 @@ async function createHairMask(
   const headRx = portrait ? 39 : 43;
   const headRy = portrait ? 31 : 34;
 
-  const lowerY = longHair
-    ? (portrait ? 78 : 82)
-    : (portrait ? 61 : 63);
-
   const sideRx = portrait ? 44 : 47;
 
+  /*
+   * OpenAI image-edit masks use transparency for the editable region.
+   * Start fully opaque (protected), then cut transparent "hair" regions.
+   */
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg"
      width="${width}" height="${height}"
      viewBox="0 0 ${width} ${height}">
-  <defs>
-    <mask id="hair">
-      <rect width="100%" height="100%" fill="black"/>
-      <ellipse
-        cx="${headCx}%"
-        cy="${headCy}%"
-        rx="${headRx}%"
-        ry="${headRy}%"
-        fill="white"/>
-      <ellipse
-        cx="12%"
-        cy="44%"
-        rx="${sideRx / 2}%"
-        ry="${longHair ? 34 : 23}%"
-        fill="white"/>
-      <ellipse
-        cx="88%"
-        cy="44%"
-        rx="${sideRx / 2}%"
-        ry="${longHair ? 34 : 23}%"
-        fill="white"/>
-      ${longHair ? `
-      <rect
-        x="5%"
-        y="${portrait ? 52 : 55}%"
-        width="90%"
-        height="${Math.max(10, lowerY - (portrait ? 52 : 55))}%"
-        fill="white"/>
-      ` : ""}
-      <ellipse
-        cx="${faceCx}%"
-        cy="${faceCy}%"
-        rx="${faceRx}%"
-        ry="${faceRy}%"
-        fill="black"/>
-    </mask>
-  </defs>
+  <rect width="100%" height="100%" fill="white"/>
+
+  <ellipse
+    cx="${headCx}%"
+    cy="${headCy}%"
+    rx="${headRx}%"
+    ry="${headRy}%"
+    fill="black"/>
+
+  <ellipse
+    cx="12%"
+    cy="44%"
+    rx="${sideRx / 2}%"
+    ry="${longHair ? 34 : 23}%"
+    fill="black"/>
+
+  <ellipse
+    cx="88%"
+    cy="44%"
+    rx="${sideRx / 2}%"
+    ry="${longHair ? 34 : 23}%"
+    fill="black"/>
+
+  ${longHair ? `
   <rect
-    width="100%"
-    height="100%"
-    fill="white"
-    mask="url(#hair)"
-    opacity="1"/>
+    x="5%"
+    y="${portrait ? 52 : 55}%"
+    width="90%"
+    height="${portrait ? 43 : 40}%"
+    fill="black"/>
+  ` : ""}
+
+  <ellipse
+    cx="${faceCx}%"
+    cy="${faceCy}%"
+    rx="${faceRx}%"
+    ry="${faceRy}%"
+    fill="white"/>
 </svg>`;
 
   return sharp(Buffer.from(svg))
     .png()
     .toBuffer();
 }
+
 
 /* =========================================================
    VERCEL BLOB
