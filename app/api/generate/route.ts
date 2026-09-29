@@ -1631,13 +1631,16 @@ async function getHairSegmentation(
   // Replicate accepts data URIs for image inputs. Keep this compact because
   // the segmentation model itself works at 640x640.
   let segmentationInput = await sharp(sourceBuffer)
-    .resize(640, 640, { fit: "inside", withoutEnlargement: true })
+    // Use the same square geometry for input and returned mask. The model
+    // itself operates at 640x640, so this keeps the mask aligned when it is
+    // mapped back to the original aspect ratio.
+    .resize(640, 640, { fit: "fill" })
     .jpeg({ quality: 72, mozjpeg: true })
     .toBuffer();
 
   if (segmentationInput.length >= 950_000) {
     segmentationInput = await sharp(sourceBuffer)
-      .resize(576, 576, { fit: "inside", withoutEnlargement: true })
+      .resize(576, 576, { fit: "fill" })
       .jpeg({ quality: 58, mozjpeg: true })
       .toBuffer();
   }
