@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { PalettePicker } from "@/components/PalettePicker";
-import { BeforeAfter } from "@/components/BeforeAfter";
 
 type Option = {
   value: string;
@@ -1224,10 +1223,6 @@ export default function Home() {
         {streamingImages.some(Boolean) ? (
           <section className="card results">
             <h2>Результаты</h2>
-            <p className="results-description">
-              Двигайте ползунок, чтобы сравнить исходное фото и результат.
-            </p>
-
             <div className="results-grid">
               {streamingImages.map((src, index) =>
                 src ? (
@@ -1241,10 +1236,26 @@ export default function Home() {
                         ? " · готово"
                         : " · генерируется"}
                     </div>
-                    <BeforeAfter
-                      before={preview}
-                      after={src}
-                    />
+                    <div
+                      style={{
+                        width: "100%",
+                        aspectRatio: "2 / 3",
+                        overflow: "hidden",
+                        borderRadius: 12,
+                        background: "#f3f1ed",
+                      }}
+                    >
+                      <img
+                        src={src}
+                        alt={"Результат варианта " + (index + 1)}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "contain",
+                          display: "block",
+                        }}
+                      />
+                    </div>
                   </div>
                 ) : null
               )}
