@@ -1224,18 +1224,26 @@ export default function Home() {
           <section className="card results">
             <h2>Результаты</h2>
             <div className="results-grid">
-              {streamingImages.map((src, index) =>
-                src ? (
+              {streamingImages.map((streamSrc, index) => {
+                const src = resultImages[index] || streamSrc;
+                if (!src) return null;
+
+                const isStored =
+                  Boolean(resultImages[index]) &&
+                  !resultImages[index].startsWith("data:");
+
+                return (
                   <div
                     className="result"
                     key={"stream-" + index}
                   >
                     <div className="result-number">
                       Вариант {index + 1}
-                      {resultImages[index]
+                      {isStored
                         ? " · готово"
                         : " · генерируется"}
                     </div>
+
                     <div
                       style={{
                         width: "100%",
@@ -1256,9 +1264,30 @@ export default function Home() {
                         }}
                       />
                     </div>
+
+                    {isStored ? (
+                      <a
+                        href={resultImages[index]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-flex",
+                          marginTop: 10,
+                          padding: "10px 14px",
+                          borderRadius: 10,
+                          background: "#24231f",
+                          color: "#fff",
+                          textDecoration: "none",
+                          fontWeight: 700,
+                          fontSize: 14,
+                        }}
+                      >
+                        Открыть изображение отдельно ↗
+                      </a>
+                    ) : null}
                   </div>
-                ) : null
-              )}
+                );
+              })}
             </div>
           </section>
         ) : null}
