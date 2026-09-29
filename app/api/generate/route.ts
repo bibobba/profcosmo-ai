@@ -1314,7 +1314,7 @@ async function streamOneVariant(params: {
     {
       method: "POST",
       headers: {
-        Authorization: \`Bearer \${apiKey}\`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: openAIForm,
     }
@@ -2054,7 +2054,7 @@ export async function POST(
           const send = (payload: any) => {
             controller.enqueue(
               encoder.encode(
-                \`data: \${JSON.stringify(payload)}\n\n\`
+                `data: ${JSON.stringify(payload)}\n\n`
               )
             );
           };
@@ -2083,7 +2083,7 @@ export async function POST(
                             type: "partial",
                             index: job.index,
                             src:
-                              \`data:image/jpeg;base64,\${partialBase64}\`,
+                              `data:image/jpeg;base64,${partialBase64}`,
                           });
                         },
                       });
