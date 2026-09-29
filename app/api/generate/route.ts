@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { PALETTE } from "@/lib/palette";
 import { deflateSync } from "node:zlib";
+import sharp from "sharp";
 import {
   put,
   issueSignedToken,
@@ -1302,6 +1303,8 @@ async function streamOneVariant(params: {
   image: File;
   prompt: string;
   paletteReference?: File | null;
+  gender: string;
+  length: string;
   onPartial: (base64Image: string) => void;
 }) {
   const {
@@ -1309,13 +1312,36 @@ async function streamOneVariant(params: {
     image,
     prompt,
     paletteReference,
+    gender,
+    length,
     onPartial,
   } = params;
+
+  const source = await prepareSourceImage(image);
+  const hairMask = await createHairMask(
+    source.width,
+    source.height,
+    gender,
+    length
+  );
 
   const openAIForm = new FormData();
 
   openAIForm.append("model", "gpt-image-2");
-  openAIForm.append("image[]", image, image.name);
+  openAIForm.append(
+    "image[]",
+    source.file,
+    source.file.name
+  );
+  openAIForm.append(
+    "mask",
+    new File(
+      [hairMask],
+      "hair-mask.png",
+      { type: "image/png" }
+    ),
+    "hair-mask.png"
+  );
 
   if (paletteReference) {
     openAIForm.append(
@@ -1326,7 +1352,7 @@ async function streamOneVariant(params: {
   }
 
   openAIForm.append("prompt", prompt);
-  openAIForm.append("size", "1024x1536");
+  openAIForm.append("size", source.size);
   openAIForm.append("quality", "high");
   openAIForm.append("output_format", "jpeg");
   openAIForm.append("output_compression", "95");
@@ -1493,6 +1519,169 @@ function createPaletteReference(hex: string, code: string) {
   const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 6;
   const png = Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]), pngChunk("IHDR", ihdr), pngChunk("IDAT", deflateSync(raw, { level: 9 })), pngChunk("IEND", Buffer.alloc(0))]);
   return new File([png], "palette-" + code.replaceAll("/", "_") + ".png", { type: "image/png" });
+}
+
+/* =========================================================
+   HAIR-ONLY MASK
+   ========================================================= */
+
+function roundTo16(value: number) {
+  return Math.max(16, Math.round(value / 16) * 16);
+}
+
+function getOutputSize(width: number, height: number) {
+  const ratio = width / height;
+
+  if (ratio >= 0.9 && ratio <= 1.1) {
+    return "1024x1024";
+  }
+
+  if (ratio < 0.9) {
+    const outWidth = 1024;
+    const outHeight = Math.min(
+      1536,
+      Math.max(
+        1024,
+        roundTo16(outWidth / ratio)
+      )
+    );
+    return `${outWidth}x${outHeight}`;
+  }
+
+  const outHeight = 1024;
+  const outWidth = Math.min(
+    1536,
+    Math.max(
+      1024,
+      roundTo16(outHeight * ratio)
+    )
+  );
+  return `${outWidth}x${outHeight}`;
+}
+
+async function prepareSourceImage(image: File) {
+  const inputBuffer = Buffer.from(
+    await image.arrayBuffer()
+  );
+
+  const pipeline = sharp(inputBuffer)
+    .rotate();
+
+  const metadata = await pipeline.metadata();
+
+  if (!metadata.width || !metadata.height) {
+    throw new Error(
+      "Не удалось определить размеры исходной фотографии."
+    );
+  }
+
+  const normalized = await pipeline
+    .png()
+    .toBuffer();
+
+  return {
+    file: new File(
+      [normalized],
+      "source.png",
+      { type: "image/png" }
+    ),
+    width: metadata.width,
+    height: metadata.height,
+    size: getOutputSize(
+      metadata.width,
+      metadata.height
+    ),
+  };
+}
+
+/*
+ * The mask is deliberately conservative:
+ * - white/opaque = area where hair may be edited;
+ * - transparent = area that should remain protected.
+ *
+ * It is guidance, not a pixel-perfect segmentation. OpenAI explicitly
+ * documents that masks guide the edit but may not be followed exactly.
+ * The prompt therefore keeps the same absolute non-hair preservation rule.
+ */
+async function createHairMask(
+  width: number,
+  height: number,
+  gender: string,
+  length: string
+) {
+  const portrait = height >= width;
+  const longHair =
+    length === "below-shoulders" ||
+    length === "long";
+
+  const faceCx = 50;
+  const faceCy = portrait ? 43 : 46;
+  const faceRx = portrait ? 20 : 23;
+  const faceRy = portrait ? 23 : 25;
+
+  const headCx = 50;
+  const headCy = portrait ? 29 : 30;
+  const headRx = portrait ? 39 : 43;
+  const headRy = portrait ? 31 : 34;
+
+  const lowerY = longHair
+    ? (portrait ? 78 : 82)
+    : (portrait ? 61 : 63);
+
+  const sideRx = portrait ? 44 : 47;
+
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${width}" height="${height}"
+     viewBox="0 0 ${width} ${height}">
+  <defs>
+    <mask id="hair">
+      <rect width="100%" height="100%" fill="black"/>
+      <ellipse
+        cx="${headCx}%"
+        cy="${headCy}%"
+        rx="${headRx}%"
+        ry="${headRy}%"
+        fill="white"/>
+      <ellipse
+        cx="12%"
+        cy="44%"
+        rx="${sideRx / 2}%"
+        ry="${longHair ? 34 : 23}%"
+        fill="white"/>
+      <ellipse
+        cx="88%"
+        cy="44%"
+        rx="${sideRx / 2}%"
+        ry="${longHair ? 34 : 23}%"
+        fill="white"/>
+      ${longHair ? `
+      <rect
+        x="5%"
+        y="${portrait ? 52 : 55}%"
+        width="90%"
+        height="${Math.max(10, lowerY - (portrait ? 52 : 55))}%"
+        fill="white"/>
+      ` : ""}
+      <ellipse
+        cx="${faceCx}%"
+        cy="${faceCy}%"
+        rx="${faceRx}%"
+        ry="${faceRy}%"
+        fill="black"/>
+    </mask>
+  </defs>
+  <rect
+    width="100%"
+    height="100%"
+    fill="white"
+    mask="url(#hair)"
+    opacity="1"/>
+</svg>`;
+
+  return sharp(Buffer.from(svg))
+    .png()
+    .toBuffer();
 }
 
 /* =========================================================
@@ -2080,6 +2269,8 @@ export async function POST(
             index,
             prompt,
             paletteReference,
+            gender,
+            length,
           };
         }
       );
@@ -2130,6 +2321,8 @@ export async function POST(
                       prompt: job.prompt,
                       paletteReference:
                         job.paletteReference,
+                      gender,
+                      length: job.length,
                       onPartial: (partialBase64) => {
                         send({
                           type: "partial",
