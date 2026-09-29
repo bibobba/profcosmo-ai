@@ -682,7 +682,7 @@ export default function Home() {
 
       if (!response.ok) {
         let message =
-          \`Не удалось запустить генерацию. Код: \${response.status}\`;
+          `Не удалось запустить генерацию. Код: ${response.status}`;
 
         try {
           const data =
