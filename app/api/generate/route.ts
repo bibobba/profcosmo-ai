@@ -852,17 +852,20 @@ SOURCE IMAGE:
 - Treat the uploaded photograph as the primary identity and composition reference.
 - Perform a targeted hairstyle/hair-color edit rather than recreating a different person or scene.
 
-IDENTITY PRESERVATION:
-- Keep exactly the same person.
-- Preserve facial identity.
-- Preserve face shape.
-- Preserve eyes, nose, mouth, jawline and skin appearance.
-- Preserve body, pose, clothing, hands and accessories.
-- Preserve camera angle.
-- Preserve lighting.
-- Preserve background.
-- Do not beautify or redesign the person.
-- Do not change facial proportions.
+IDENTITY AND SOURCE IMAGE LOCK — HIGHEST PRIORITY:
+- The uploaded photograph is the source image. EDIT THIS PERSON; do not recreate a different person from scratch.
+- Preserve EXACTLY the same person's identity and recognizable facial structure.
+- Preserve the original face shape, facial proportions, eyes, eyebrows, nose, lips, mouth, jaw, chin, ears and skin texture.
+- Preserve the original skin tone, complexion, facial expression and apparent age.
+- DO NOT beautify, retouch, smooth, reshape, slim, widen, masculinize or feminize the face.
+- DO NOT alter facial symmetry or facial proportions.
+- Preserve EXACTLY the original body, shoulders, neck, hands, pose and visible anatomy.
+- Preserve EXACTLY the original clothing, neckline, straps, jewelry and accessories. DO NOT replace, recolor, redesign or invent clothing.
+- Preserve EXACTLY the original background and scene elements.
+- Preserve the original camera angle, framing, perspective, composition and lighting.
+- Outside the hair region, treat the source image as IMMUTABLE. No intentional changes are allowed anywhere outside the hair.
+- The ONLY intended edits are the selected haircut, hair shape, hair texture and hair color.
+- If a hairstyle request conflicts with identity preservation, preserve the identity and all non-hair content.
 
 HAIR EDITING:
 - Change the hair realistically as if the person actually received this haircut and/or color.
@@ -889,7 +892,9 @@ HARD CONSTRAINTS — FOLLOW LITERALLY:
 Do not substitute a visually similar but different haircut.
 Do not mix several haircut types.
 Do not invent an unrelated hairstyle.
-Do not change clothing, pose, background or lighting.
+DO NOT change clothing, pose, background, lighting, body or face.
+- DO NOT regenerate non-hair areas.
+- Do not introduce any new garment, accessory, facial feature or background object.
 `;
 
   const structureDescription =
@@ -960,8 +965,9 @@ ${colorDescription}
 
 FINAL CHECK:
 Before producing the image, verify:
-1. Same person.
-2. Male haircut.
+1. EXACTLY the same person as the source image; face and identity are preserved.
+2. Clothing, body, pose, background and lighting are unchanged.
+3. Male haircut.
 3. Correct selected form: ${maleForm}.
 4. Correct selected structure: ${structure}.
 5. Correct selected temple design: ${temples}.
@@ -999,8 +1005,9 @@ ${colorDescription}
 
 FINAL CHECK:
 Before producing the image, verify:
-1. Same person.
-2. Female haircut.
+1. EXACTLY the same person as the source image; face and identity are preserved.
+2. Clothing, body, pose, background and lighting are unchanged.
+3. Female haircut.
 3. Correct selected haircut form: ${femaleForm}.
 4. Correct selected length: ${length}.
 5. Correct selected hair structure: ${structure}.
