@@ -745,6 +745,7 @@ export default function Home() {
           index?: number;
           src?: string;
           url?: string;
+          src?: string;
           error?: string;
         };
 
@@ -770,6 +771,30 @@ export default function Home() {
 
         if (
           event.type === "complete" &&
+          typeof event.index === "number" &&
+          (event.src || event.url)
+        ) {
+          const resultSrc =
+            event.src || event.url!;
+
+          updateStreamingImage(
+            event.index,
+            resultSrc
+          );
+
+          setResultImages(
+            (current) => {
+              const next = [...current];
+              next[event.index!] =
+                resultSrc;
+              return next;
+            }
+          );
+          return;
+        }
+
+        if (
+          event.type === "stored" &&
           typeof event.index === "number" &&
           event.url
         ) {
