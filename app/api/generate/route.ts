@@ -1620,13 +1620,6 @@ async function loadHairParserModel() {
   if (!hairParserModelPromise) {
     hairParserModelPromise = (async () => {
       try {
-        const existing = await sharp(HairParserModelPathPlaceholder()).metadata();
-        void existing;
-      } catch {
-        // The ONNX file is stored in /tmp between warm invocations.
-      }
-
-      try {
         const fs = await import("node:fs/promises");
         const existing = await fs.stat(HAIR_PARSER_MODEL_PATH);
         if (existing.size > 1_000_000) {
@@ -1778,10 +1771,6 @@ async function getHairSegmentation(
     .toBuffer({ resolveWithObject: true });
 }
 
-function HairParserModelPathPlaceholder() {
-  return HAIR_PARSER_MODEL_PATH;
-}
-
 async function createHairMask(
   width: number,
   height: number,
@@ -1789,11 +1778,22 @@ async function createHairMask(
   length: string,
   sourceFile: File
 ) {
-  const segmentation = await getHairSegmentation(
-    sourceFile,
-    width,
-    height
-  );
+  let segmentation: { data: Buffer } | null = null;
+
+  try {
+    segmentation = await getHairSegmentation(
+      sourceFile,
+      width,
+      height
+    );
+  } catch (error) {
+    // Never block image generation if the local parser cannot initialize.
+    // The existing geometric mask is safer than failing the whole request.
+    console.error(
+      "[PROFCOSMO] BiSeNet segmentation failed; using safe fallback:",
+      error
+    );
+  }
 
   const portrait = height >= width;
   const longHair =
