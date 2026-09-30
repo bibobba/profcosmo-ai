@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import sharp from "sharp";
+import sharp, { type OverlayOptions } from "sharp";
 import * as ort from "onnxruntime-node";
 
 export const runtime = "nodejs";
@@ -918,7 +918,7 @@ export async function POST(request: Request) {
           </svg>`)
         : null;
 
-    const previewComposites: sharp.OverlayOptions[] = [
+    const previewComposites: OverlayOptions[] = [
       {
         input: await sharp(mask)
           .extractChannel("alpha")
