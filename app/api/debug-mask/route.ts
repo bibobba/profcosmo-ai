@@ -175,6 +175,10 @@ async function getHairSegmentation(
   }
 
   const values = output.data as Float32Array | number[];
+
+  // Diagnostic only: record the actual class distribution returned by ONNX.
+  const classCounts = new Array<number>(channels).fill(0);
+
   const hairMask = Buffer.alloc(outWidth * outHeight);
 
   for (let y = 0; y < outHeight; y++) {
@@ -193,10 +197,23 @@ async function getHairSegmentation(
         }
       }
 
+      classCounts[bestClass] += 1;
       hairMask[pixel] =
         bestClass === HAIR_CLASS_INDEX ? 255 : 0;
     }
   }
+
+  const classDistribution = classCounts
+    .map((count, index) => ({
+      classIndex: index,
+      pixels: count,
+      percent: Number(
+        ((count / (outWidth * outHeight)) * 100).toFixed(3)
+      ),
+    }))
+    .sort((a, b) => b.pixels - a.pixels);
+
+  const hairPixels = classCounts[HAIR_CLASS_INDEX] || 0;
 
   const localMask = await sharp(hairMask, {
     raw: {
@@ -508,6 +525,18 @@ export async function POST(request: Request) {
       height: metadata.height,
       mask: `data:image/png;base64,${maskView.toString("base64")}`,
       preview: `data:image/jpeg;base64,${preview.toString("base64")}`,
+      diagnostic: {
+        outputDims: dims,
+        channels,
+        outWidth,
+        outHeight,
+        hairClassIndex: HAIR_CLASS_INDEX,
+        hairPixels,
+        hairPercent: Number(
+          ((hairPixels / (outWidth * outHeight)) * 100).toFixed(3)
+        ),
+        topClasses: classDistribution.slice(0, 8),
+      },
     });
   } catch (error) {
     console.error("[PROFCOSMO] debug mask error:", error);
