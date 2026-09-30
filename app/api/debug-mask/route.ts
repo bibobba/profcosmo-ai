@@ -81,8 +81,54 @@ async function getHairSegmentation(
     await sourceFile.arrayBuffer()
   );
 
+  /*
+   * BiSeNet face parsing is trained/evaluated on face-centred crops.
+   * The previous diagnostic fed the entire portrait into 512x512, making
+   * the face too small for reliable hair classification.
+   *
+   * For this diagnostic we first take a large, centred head/face crop,
+   * run BiSeNet there, then map the hair mask back to the original image.
+   * This changes only the diagnostic parser input; the production route
+   * remains untouched until we validate the result.
+   */
+  const cropSize = Math.max(
+    256,
+    Math.min(
+      width,
+      height,
+      Math.round(
+        Math.min(width, height) * 0.90
+      )
+    )
+  );
+
+  const cropLeft = Math.max(
+    0,
+    Math.round((width - cropSize) / 2)
+  );
+
+  const portrait = height >= width;
+  const cropTop = Math.max(
+    0,
+    Math.min(
+      height - cropSize,
+      Math.round(
+        height * (portrait ? 0.02 : 0.05)
+      )
+    )
+  );
+
   const { data: rgb } = await sharp(sourceBuffer)
-    .resize(512, 512, { fit: "fill" })
+    .rotate()
+    .extract({
+      left: cropLeft,
+      top: cropTop,
+      width: cropSize,
+      height: cropSize,
+    })
+    .resize(512, 512, {
+      fit: "fill",
+    })
     .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -152,22 +198,45 @@ async function getHairSegmentation(
     }
   }
 
-  // Keep the parser's pixel-accurate hair boundary, then add only a tiny
-  // 2px safety expansion for strands/anti-aliased edges.
-  return sharp(hairMask, {
+  const localMask = await sharp(hairMask, {
     raw: {
       width: outWidth,
       height: outHeight,
       channels: 1,
     },
   })
-    .resize(width, height, {
+    .resize(cropSize, cropSize, {
       fit: "fill",
       kernel: "nearest",
     })
     .dilate(2)
     .raw()
+    .toBuffer();
+
+  const fullMask = await sharp({
+    create: {
+      width,
+      height,
+      channels: 1,
+      background: 0,
+    },
+  })
+    .composite([
+      {
+        input: localMask,
+        raw: {
+          width: cropSize,
+          height: cropSize,
+          channels: 1,
+        },
+        left: cropLeft,
+        top: cropTop,
+      },
+    ])
+    .raw()
     .toBuffer({ resolveWithObject: true });
+
+  return fullMask;
 }
 
 async function createHairMask(
