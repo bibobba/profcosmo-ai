@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 const HAIR_PARSER_MODEL_URL =
-  "https://huggingface.co/yakhyo/uniface-weights/resolve/main/parsing_resnet18.onnx";
+  "https://github.com/yakhyo/face-parsing/releases/download/weights/resnet18.onnx";
 const HAIR_PARSER_MODEL_PATH =
   "/tmp/profcosmo-parsing-resnet18.onnx";
 const HAIR_CLASS_INDEX = 17; // yakhyo/CelebAMask-HQ: hair
