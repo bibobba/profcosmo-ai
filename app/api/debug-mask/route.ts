@@ -463,14 +463,17 @@ async function createHairMask(
 
   return {
     buffer,
-    diagnostic: segmentation
-      ? {
-          ...segmentation.info,
-          segmentationError: null,
-        }
-      : {
-          segmentationError,
-        },
+    diagnostic: {
+      ...(segmentation
+        ? {
+            ...segmentation.info,
+            segmentationError: null,
+          }
+        : {
+            segmentationError,
+          }),
+      hairPixelsAfterDilation,
+    },
   };
 }
 
