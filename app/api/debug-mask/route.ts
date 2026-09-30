@@ -305,6 +305,8 @@ async function createHairMask(
     255
   );
 
+  let hairPixelsAfterDilation = 0;
+
   const insideEllipse = (
     x: number,
     y: number,
@@ -358,7 +360,7 @@ async function createHairMask(
       .raw()
       .toBuffer();
 
-    let hairPixelsAfterDilation = 0;
+    hairPixelsAfterDilation = 0;
     for (const value of expanded) {
       if (value >= 128) hairPixelsAfterDilation++;
     }
