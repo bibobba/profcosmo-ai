@@ -273,17 +273,23 @@ async function detectLargestFace(
   > = [];
 
   /*
-   * sharp(..., fit: "contain") uses the same top-left padding strategy
-   * as UniFace's resize_image(). For a 1440x1920 portrait:
+   * sharp(..., fit: "contain") centers the resized image inside the
+   * 640x640 canvas by default. For a 1440x1920 portrait:
    *   1920 -> 640
    *   1440 -> 480
+   *   horizontal padding = 80 px on each side.
    *
-   * Therefore one detector pixel corresponds to resizeFactor pixels in
-   * the original image. We convert detector coordinates back using the
-   * actual aspect-ratio-preserving resize factor, not width/640 and
-   * height/640 independently.
+   * SCRFD coordinates are in the padded 640x640 image. We must remove
+   * that padding before mapping them back to the original image.
    */
-  const resizeFactor = detectorInputSize / height;
+  const resizeFactor = Math.min(
+    detectorInputSize / width,
+    detectorInputSize / height
+  );
+  const resizedWidth = Math.round(width * resizeFactor);
+  const resizedHeight = Math.round(height * resizeFactor);
+  const padX = (detectorInputSize - resizedWidth) / 2;
+  const padY = (detectorInputSize - resizedHeight) / 2;
 
   for (let level = 0; level < 3; level++) {
     const stride = strides[level];
@@ -332,10 +338,10 @@ async function detectLargestFace(
         );
 
         detections.push([
-          Math.max(0, box[0] / resizeFactor),
-          Math.max(0, box[1] / resizeFactor),
-          Math.min(width, box[2] / resizeFactor),
-          Math.min(height, box[3] / resizeFactor),
+          Math.max(0, (box[0] - padX) / resizeFactor),
+          Math.max(0, (box[1] - padY) / resizeFactor),
+          Math.min(width, (box[2] - padX) / resizeFactor),
+          Math.min(height, (box[3] - padY) / resizeFactor),
           score,
         ]);
       }
