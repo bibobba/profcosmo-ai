@@ -270,7 +270,8 @@ async function createHairMask(
   structure: string,
   sourceFile: File
 ) {
-  let segmentation: { data: Buffer } | null = null;
+  let segmentation: { data: Buffer; info: any } | null = null;
+  let segmentationError: string | null = null;
 
   try {
     segmentation = await getHairSegmentation(
@@ -281,6 +282,8 @@ async function createHairMask(
   } catch (error) {
     // Never block image generation if the local parser cannot initialize.
     // The existing geometric mask is safer than failing the whole request.
+    segmentationError =
+      error instanceof Error ? error.message : String(error);
     console.error(
       "[PROFCOSMO] BiSeNet segmentation failed; using safe fallback:",
       error
@@ -443,7 +446,7 @@ async function createHairMask(
     rgba[offset + 3] = alpha[i];
   }
 
-  return sharp(rgba, {
+  const buffer = await sharp(rgba, {
     raw: {
       width,
       height,
@@ -452,6 +455,18 @@ async function createHairMask(
   })
     .png()
     .toBuffer();
+
+  return {
+    buffer,
+    diagnostic: segmentation
+      ? {
+          ...segmentation.info,
+          segmentationError: null,
+        }
+      : {
+          segmentationError,
+        },
+  };
 }
 
 
@@ -489,7 +504,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const mask = await createHairMask(
+    const maskResult = await createHairMask(
       metadata.width,
       metadata.height,
       gender,
@@ -499,6 +514,7 @@ export async function POST(request: Request) {
         type: image.type || "image/jpeg",
       })
     );
+    const mask = maskResult.buffer;
 
     // Diagnostic view:
     // white = editable hair zone, black = protected source pixels.
@@ -533,12 +549,7 @@ export async function POST(request: Request) {
       preview: `data:image/jpeg;base64,${preview.toString("base64")}`,
       diagnostic: {
         hairClassIndex: HAIR_CLASS_INDEX,
-        parserOutputDims: (mask as any).info?.parserOutputDims ?? null,
-        parserChannels: (mask as any).info?.parserChannels ?? null,
-        parserOutWidth: (mask as any).info?.parserOutWidth ?? null,
-        parserOutHeight: (mask as any).info?.parserOutHeight ?? null,
-        hairPixels: (mask as any).info?.parserHairPixels ?? null,
-        topClasses: (mask as any).info?.parserTopClasses ?? [],
+        ...(maskResult.diagnostic || {}),
       },
     });
   } catch (error) {
