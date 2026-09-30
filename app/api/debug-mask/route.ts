@@ -411,9 +411,8 @@ export async function POST(request: Request) {
     // Diagnostic view:
     // white = editable hair zone, black = protected source pixels.
     const maskView = await sharp(mask)
-      .ensureAlpha()
-      .removeAlpha()
-      .threshold(128)
+      .extractChannel("alpha")
+      .negate()
       .png()
       .toBuffer();
 
