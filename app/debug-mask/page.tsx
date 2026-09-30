@@ -112,6 +112,46 @@ export default function DebugMaskPage() {
               style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
             />
 
+            <h2>Новый тест: MODNet portrait matting</h2>
+            <p>
+              Здесь проверяем только качество новой маски. Production-генерация
+              и текущая BiSeNet-маска не меняются.
+            </p>
+
+            {result.modnetMattePreview ? (
+              <>
+                <h3>MODNet — исходная matte</h3>
+                <img
+                  src={result.modnetMattePreview}
+                  alt="MODNet matte"
+                  style={{
+                    maxWidth: "100%",
+                    display: "block",
+                    borderRadius: 12,
+                  }}
+                />
+              </>
+            ) : (
+              <pre style={{ whiteSpace: "pre-wrap", color: "#b00020" }}>
+                MODNet не запустился: {result.diagnostic?.modnet?.error || "неизвестная ошибка"}
+              </pre>
+            )}
+
+            {result.modnetHairCandidatePreview && (
+              <>
+                <h3>MODNet + защита лица — кандидат зоны волос</h3>
+                <img
+                  src={result.modnetHairCandidatePreview}
+                  alt="MODNet hair candidate"
+                  style={{
+                    maxWidth: "100%",
+                    display: "block",
+                    borderRadius: 12,
+                  }}
+                />
+              </>
+            )}
+
             <h2>Новая безопасная геометрическая зона</h2>
             <p>
               Экспериментальная маска на основе facial landmarks SCRFD.
