@@ -11,6 +11,7 @@ export default function DebugMaskPage() {
   const [preview, setPreview] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [diagnostic, setDiagnostic] = useState<any>(null);
 
   async function run() {
     if (!file) {
@@ -22,6 +23,7 @@ export default function DebugMaskPage() {
     setError("");
     setMask("");
     setPreview("");
+    setDiagnostic(null);
 
     const formData = new FormData();
     formData.append("image", file);
@@ -43,6 +45,7 @@ export default function DebugMaskPage() {
 
       setMask(data.mask);
       setPreview(data.preview);
+      setDiagnostic(data.diagnostic || null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка диагностики.");
     } finally {
@@ -151,6 +154,29 @@ export default function DebugMaskPage() {
               alt="Диагностическая маска поверх исходного фото"
               style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
             />
+          </section>
+        )}
+
+        {diagnostic && (
+          <section
+            style={{
+              marginBottom: 24,
+              background: "#fff",
+              borderRadius: 12,
+              padding: 20,
+            }}
+          >
+            <h2>Диагностика ONNX</h2>
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                fontSize: 14,
+                lineHeight: 1.5,
+              }}
+            >
+{JSON.stringify(diagnostic, null, 2)}
+            </pre>
           </section>
         )}
 
