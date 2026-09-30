@@ -1106,6 +1106,108 @@ async function getHairSegmentation(
   };
 }
 
+function createHybridHairMask(
+  matte: Buffer,
+  skinMask: Buffer | undefined,
+  leftEarMask: Buffer | undefined,
+  rightEarMask: Buffer | undefined,
+  neckMask: Buffer | undefined,
+  clothMask: Buffer | undefined,
+  width: number,
+  height: number,
+  face: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    landmarks?: Array<[number, number]> | null;
+  },
+  structure: string,
+  length: string
+) {
+  const result = Buffer.alloc(width * height, 0);
+
+  const faceWidth = Math.max(1, face.x2 - face.x1);
+  const faceHeight = Math.max(1, face.y2 - face.y1);
+  const afro = structure === "afro-curls";
+  const longHair =
+    length === "below-shoulders" || length === "long";
+
+  const left = Math.max(
+    0,
+    Math.floor(face.x1 - faceWidth * (afro ? 1.45 : 1.15))
+  );
+  const right = Math.min(
+    width,
+    Math.ceil(face.x2 + faceWidth * (afro ? 1.45 : 1.15))
+  );
+  const top = Math.max(
+    0,
+    Math.floor(face.y1 - faceHeight * (afro ? 1.35 : 1.05))
+  );
+  const bottom = Math.min(
+    height,
+    Math.ceil(
+      face.y2 +
+        faceHeight *
+          (longHair ? 1.7 : afro ? 0.45 : 0.15)
+    )
+  );
+
+  let faceCx = (face.x1 + face.x2) / 2;
+  let faceCy = (face.y1 + face.y2) / 2;
+  let faceRx = faceWidth * 0.58;
+  let faceRy = faceHeight * 0.68;
+
+  const landmarks = face.landmarks;
+  if (landmarks && landmarks.length >= 5) {
+    const [leftEye, rightEye, nose, leftMouth, rightMouth] = landmarks;
+    const featureTop = Math.min(
+      leftEye[1], rightEye[1], nose[1], leftMouth[1], rightMouth[1]
+    );
+    const featureBottom = Math.max(
+      leftEye[1], rightEye[1], nose[1], leftMouth[1], rightMouth[1]
+    );
+    faceCx = (leftEye[0] + rightEye[0]) / 2;
+    faceCy =
+      (featureTop + featureBottom) / 2 +
+      (featureBottom - featureTop) * 0.10;
+    faceRx =
+      Math.abs(rightEye[0] - leftEye[0]) * (afro ? 1.02 : 0.96);
+    faceRy =
+      Math.max(1, featureBottom - featureTop) * (afro ? 1.30 : 1.22);
+  }
+
+  const faceProtection = (x: number, y: number) => {
+    const dx = (x - faceCx) / Math.max(1, faceRx);
+    const dy = (y - faceCy) / Math.max(1, faceRy);
+    return dx * dx + dy * dy <= 1;
+  };
+
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      const i = y * width + x;
+
+      // MODNet establishes that the pixel belongs to the person.
+      if (matte[i] < 110) continue;
+
+      // Existing face parsing is used only as a veto mask.
+      if (skinMask?.[i] >= 128) continue;
+      if (leftEarMask?.[i] >= 128) continue;
+      if (rightEarMask?.[i] >= 128) continue;
+      if (neckMask?.[i] >= 128) continue;
+      if (clothMask?.[i] >= 128) continue;
+
+      // Deterministic face protection wins over every learned mask.
+      if (faceProtection(x, y)) continue;
+
+      result[i] = matte[i];
+    }
+  }
+
+  return result;
+}
+
 function createSafeGeometricMask(
   width: number,
   height: number,
@@ -1557,6 +1659,30 @@ export async function POST(request: Request) {
       console.error("[PROFCOSMO] MODNet diagnostic failed:", error);
     }
 
+    let hybridHairMask: Buffer | null = null;
+
+    const hybridFace = maskResult.diagnostic?.face;
+    const classMasks = maskResult.diagnostic?.diagnosticClassMasks;
+
+    if (modnetMatte && hybridFace) {
+      hybridHairMask = createHybridHairMask(
+        modnetMatte,
+        classMasks?.[1],
+        classMasks?.[7],
+        classMasks?.[8],
+        classMasks?.[14],
+        classMasks?.[16],
+        metadata.width,
+        metadata.height,
+        {
+          ...hybridFace,
+          landmarks: maskResult.diagnostic?.landmarks || null,
+        },
+        structure,
+        length
+      );
+    }
+
     let mobileHairNetMask: Buffer | null = null;
     let mobileHairNetError: string | null = null;
     let mobileHairNetDims: number[] | null = null;
@@ -1667,6 +1793,31 @@ export async function POST(request: Request) {
       ])
       .jpeg({ quality: 92 })
       .toBuffer();
+
+    let hybridHairPreview: string | null = null;
+    let hybridHairCleanMask: string | null = null;
+
+    if (hybridHairMask) {
+      const hybridClean = await sharp(hybridHairMask, {
+        raw: { width: metadata.width, height: metadata.height, channels: 1 },
+      }).png().toBuffer();
+
+      hybridHairCleanMask =
+        `data:image/png;base64,${hybridClean.toString("base64")}`;
+
+      const hybridOverlay = await sharp(sourceBuffer)
+        .composite([{
+          input: await sharp(hybridHairMask, {
+            raw: { width: metadata.width, height: metadata.height, channels: 1 },
+          }).png().toBuffer(),
+          blend: "screen",
+        }])
+        .jpeg({ quality: 92 })
+        .toBuffer();
+
+      hybridHairPreview =
+        `data:image/jpeg;base64,${hybridOverlay.toString("base64")}`;
+    }
 
     let mobileHairNetPreview: string | null = null;
     let mobileHairNetCleanMask: string | null = null;
@@ -1878,6 +2029,8 @@ export async function POST(request: Request) {
       safeMaskPng: `data:image/png;base64,${safeMaskPng.toString("base64")}`,
       modnetMattePreview: modnetMatteView,
       modnetHairCandidatePreview: modnetHairCandidateView,
+      hybridHairPreview,
+      hybridHairCleanMask,
       mobileHairNetPreview,
       mobileHairNetCleanMask,
       diagnostic: {
@@ -1902,6 +2055,12 @@ export async function POST(request: Request) {
         modnet: {
           available: Boolean(modnetMatte),
           error: modnetError,
+        },
+        hybridHair: {
+          available: Boolean(hybridHairMask),
+          editablePixels: hybridHairMask
+            ? hybridHairMask.reduce((count, value) => count + (value >= 128 ? 1 : 0), 0)
+            : 0,
         },
         mobileHairNet: {
           available: Boolean(mobileHairNetMask),

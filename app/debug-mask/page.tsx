@@ -112,24 +112,33 @@ export default function DebugMaskPage() {
               style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
             />
 
-            <h2>Новый тест: MobileHairNet V2</h2>
-            <p>Отдельная модель именно для сегментации волос. Production пока её не использует.</p>
-            {result.mobileHairNetPreview ? (
+            <h2>Текущий тест: гибридная маска волос</h2>
+            <p>
+              MODNet определяет силуэт человека, SCRFD задаёт область головы,
+              а face parsing удаляет лицо, уши, шею и одежду. Production пока не использует эту маску.
+            </p>
+            {result.hybridHairPreview ? (
               <>
-                <h3>MobileHairNet V2 — маска поверх оригинала</h3>
-                <img src={result.mobileHairNetPreview} alt="MobileHairNet V2 hair mask"
-                  style={{ maxWidth: "100%", display: "block", borderRadius: 12 }} />
+                <h3>Гибридная маска поверх оригинала</h3>
+                <img
+                  src={result.hybridHairPreview}
+                  alt="Hybrid hair mask"
+                  style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
+                />
                 <h3>Чистая маска волос</h3>
-                <img src={result.mobileHairNetCleanMask} alt="MobileHairNet V2 clean hair mask"
-                  style={{ maxWidth: "100%", display: "block", borderRadius: 12 }} />
+                <img
+                  src={result.hybridHairCleanMask}
+                  alt="Hybrid clean hair mask"
+                  style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
+                />
               </>
             ) : (
               <pre style={{ whiteSpace: "pre-wrap", color: "#b00020" }}>
-                MobileHairNet не запустился: {result.diagnostic?.mobileHairNet?.error || "неизвестная ошибка"}
+                Гибридная маска не создана.
               </pre>
             )}
 
-            <h2>Новый тест: MODNet portrait matting</h2>
+            <h2>Диагностика</h2>
             <p>
               Здесь проверяем только качество новой маски. Production-генерация
               и текущая BiSeNet-маска не меняются.
@@ -168,33 +177,6 @@ export default function DebugMaskPage() {
                 />
               </>
             )}
-
-            <h2>Новая безопасная геометрическая зона</h2>
-            <p>
-              Экспериментальная маска на основе facial landmarks SCRFD.
-              Белая область — зона, которую разрешено менять; лицо вне этой
-              зоны остаётся защищённым. Production-генерацию этот тест не меняет.
-            </p>
-            <img
-              src={result.safeMaskPreview}
-              alt="Безопасная геометрическая маска поверх фото"
-              style={{
-                maxWidth: "100%",
-                display: "block",
-                borderRadius: 12,
-              }}
-            />
-
-            <h3>Чистая безопасная маска</h3>
-            <img
-              src={result.safeMask}
-              alt="Чистая безопасная маска"
-              style={{
-                maxWidth: "100%",
-                display: "block",
-                borderRadius: 12,
-              }}
-            />
 
             <h2>Сравнение классов BiSeNet</h2>
             <p>
