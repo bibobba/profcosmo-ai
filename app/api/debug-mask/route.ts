@@ -677,7 +677,19 @@ async function getHairSegmentation(
         x2: Number(face.x2.toFixed(1)),
         y2: Number(face.y2.toFixed(1)),
         confidence: Number(face.confidence.toFixed(4)),
+        landmarks: face.landmarks
+          ? face.landmarks.map(([x, y]) => [
+              Number(x.toFixed(1)),
+              Number(y.toFixed(1)),
+            ])
+          : null,
       },
+      landmarks: face.landmarks
+        ? face.landmarks.map(([x, y]) => [
+            Number(x.toFixed(1)),
+            Number(y.toFixed(1)),
+          ])
+        : null,
       crop: {
         left: cropLeft,
         top: cropTop,
