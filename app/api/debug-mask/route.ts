@@ -859,6 +859,8 @@ async function createHairMask(
 
   return {
     buffer,
+    diagnosticClassMasks:
+      segmentation?.diagnosticClassMasks || {},
     diagnostic: {
       ...(segmentation
         ? {
