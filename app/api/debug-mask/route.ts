@@ -951,7 +951,8 @@ export async function POST(request: Request) {
       mask: `data:image/png;base64,${maskView.toString("base64")}`,
       preview: `data:image/jpeg;base64,${preview.toString("base64")}`,
       diagnostic: {
-        hairClassIndex: HAIR_CLASS_INDEX,
+        diagnosticVersion: "scrfd-debug-2",
+      hairClassIndex: HAIR_CLASS_INDEX,
         editablePixels: (() => {
           const alpha = maskAlpha;
           let count = 0;
