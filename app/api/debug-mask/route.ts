@@ -671,7 +671,11 @@ async function createHairMask(
   structure: string,
   sourceFile: File
 ) {
-  let segmentation: { data: Buffer; info: any } | null = null;
+  let segmentation: {
+    data: Buffer;
+    info: any;
+    diagnosticClassMasks?: Record<number, Buffer>;
+  } | null = null;
   let segmentationError: string | null = null;
 
   try {
