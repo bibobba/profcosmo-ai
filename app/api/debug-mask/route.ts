@@ -81,6 +81,262 @@ const FACE_DETECTOR_MODEL_PATH =
 let faceDetectorSessionPromise: Promise<ort.InferenceSession> | null = null;
 let faceDetectorModelPromise: Promise<Buffer> | null = null;
 
+const MODNET_MODEL_URL =
+  "https://huggingface.co/yakhyo/uniface-weights/resolve/main/modnet_photographic.onnx";
+const MODNET_MODEL_PATH =
+  "/tmp/profcosmo-modnet-photographic.onnx";
+
+let modnetSessionPromise: Promise<ort.InferenceSession> | null = null;
+let modnetModelPromise: Promise<Buffer> | null = null;
+
+async function loadModnetModel() {
+  if (!modnetModelPromise) {
+    modnetModelPromise = (async () => {
+      try {
+        const fs = await import("node:fs/promises");
+        const existing = await fs.stat(MODNET_MODEL_PATH);
+        if (existing.size > 10_000_000) {
+          return fs.readFile(MODNET_MODEL_PATH);
+        }
+      } catch {
+        // First invocation.
+      }
+
+      console.log("[PROFCOSMO] downloading MODNet ONNX model");
+      const response = await fetch(MODNET_MODEL_URL);
+      if (!response.ok) {
+        throw new Error(
+          `Не удалось загрузить MODNet: HTTP ${response.status}`
+        );
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length < 10_000_000) {
+        throw new Error("Файл MODNet повреждён или слишком мал.");
+      }
+
+      const fs = await import("node:fs/promises");
+      await fs.writeFile(MODNET_MODEL_PATH, buffer);
+      console.log("[PROFCOSMO] MODNet ONNX model ready", {
+        megabytes: Math.round(buffer.length / 1024 / 1024),
+      });
+      return buffer;
+    })();
+  }
+
+  return modnetModelPromise;
+}
+
+async function getModnetSession() {
+  if (!modnetSessionPromise) {
+    modnetSessionPromise = (async () => {
+      const model = await loadModnetModel();
+      const session = await ort.InferenceSession.create(model, {
+        executionProviders: ["cpu"],
+        graphOptimizationLevel: "all",
+      });
+      console.log("[PROFCOSMO] MODNet session ready", {
+        inputs: session.inputNames,
+        outputs: session.outputNames,
+      });
+      return session;
+    })();
+  }
+
+  return modnetSessionPromise;
+}
+
+async function getModnetMatte(
+  sourceBuffer: Buffer,
+  width: number,
+  height: number
+) {
+  const inputSize = 512;
+
+  const { data: rgb } = await sharp(sourceBuffer)
+    .rotate()
+    .resize(inputSize, inputSize, {
+      fit: "fill",
+    })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  // MODNet photographic preprocessing:
+  // RGB -> [0,1] -> normalize to [-1,1] -> NCHW.
+  const input = new Float32Array(
+    1 * 3 * inputSize * inputSize
+  );
+  const plane = inputSize * inputSize;
+
+  for (let i = 0; i < plane; i++) {
+    input[i] =
+      (rgb[i * 3] / 255 - 0.5) / 0.5;
+    input[plane + i] =
+      (rgb[i * 3 + 1] / 255 - 0.5) / 0.5;
+    input[plane * 2 + i] =
+      (rgb[i * 3 + 2] / 255 - 0.5) / 0.5;
+  }
+
+  const session = await getModnetSession();
+  const inputName = session.inputNames[0];
+  const outputs = await session.run({
+    [inputName]: new ort.Tensor(
+      "float32",
+      input,
+      [1, 3, inputSize, inputSize]
+    ),
+  });
+
+  const output = outputs[session.outputNames[0]];
+  if (!output?.data || !output.dims) {
+    throw new Error("MODNet не вернул matte.");
+  }
+
+  const dims = output.dims.map(Number);
+  if (dims.length !== 4) {
+    throw new Error(
+      `Неожиданная форма выхода MODNet: [${dims.join(", ")}]`
+    );
+  }
+
+  const matteHeight = dims[2];
+  const matteWidth = dims[3];
+  const values = output.data as Float32Array | number[];
+
+  const small = Buffer.alloc(
+    matteWidth * matteHeight
+  );
+
+  for (let i = 0; i < small.length; i++) {
+    const value = Math.max(
+      0,
+      Math.min(1, Number(values[i]))
+    );
+    small[i] = Math.round(value * 255);
+  }
+
+  const matte = await sharp(small, {
+    raw: {
+      width: matteWidth,
+      height: matteHeight,
+      channels: 1,
+    },
+  })
+    .resize(width, height, {
+      fit: "fill",
+      kernel: "linear",
+    })
+    .raw()
+    .toBuffer();
+
+  return {
+    matte,
+    dims,
+  };
+}
+
+function createModnetHairCandidate(
+  matte: Buffer,
+  width: number,
+  height: number,
+  face: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    landmarks?: Array<[number, number]> | null;
+  },
+  structure: string,
+  length: string
+) {
+  const result = Buffer.alloc(width * height, 0);
+
+  const faceWidth = Math.max(1, face.x2 - face.x1);
+  const faceHeight = Math.max(1, face.y2 - face.y1);
+  const afro = structure === "afro-curls";
+  const longHair =
+    length === "below-shoulders" ||
+    length === "long";
+
+  // MODNet gives the person matte. We use SCRFD only to restrict it
+  // to the head/hair neighborhood; the matte itself determines the
+  // actual silhouette instead of a geometric ellipse.
+  const left = Math.max(
+    0,
+    Math.floor(face.x1 - faceWidth * (afro ? 1.45 : 1.15))
+  );
+  const right = Math.min(
+    width,
+    Math.ceil(face.x2 + faceWidth * (afro ? 1.45 : 1.15))
+  );
+  const top = Math.max(
+    0,
+    Math.floor(face.y1 - faceHeight * (afro ? 1.45 : 1.15))
+  );
+  const bottom = Math.min(
+    height,
+    Math.ceil(
+      face.y2 +
+        faceHeight *
+          (longHair ? 2.2 : afro ? 0.65 : 0.35)
+    )
+  );
+
+  const landmarks = face.landmarks;
+  let faceCx = (face.x1 + face.x2) / 2;
+  let faceCy = (face.y1 + face.y2) / 2;
+  let faceRx = faceWidth * 0.58;
+  let faceRy = faceHeight * 0.68;
+
+  if (landmarks && landmarks.length >= 5) {
+    const [leftEye, rightEye, nose, leftMouth, rightMouth] =
+      landmarks;
+    faceCx = (leftEye[0] + rightEye[0]) / 2;
+    const featureTop = Math.min(
+      leftEye[1],
+      rightEye[1],
+      nose[1],
+      leftMouth[1],
+      rightMouth[1]
+    );
+    const featureBottom = Math.max(
+      leftEye[1],
+      rightEye[1],
+      nose[1],
+      leftMouth[1],
+      rightMouth[1]
+    );
+    faceCy =
+      (featureTop + featureBottom) / 2 +
+      (featureBottom - featureTop) * 0.10;
+    faceRx =
+      Math.abs(rightEye[0] - leftEye[0]) *
+      (afro ? 0.95 : 0.90);
+    faceRy =
+      Math.max(1, featureBottom - featureTop) *
+      (afro ? 1.25 : 1.18);
+  }
+
+  for (let y = top; y < bottom; y++) {
+    for (let x = left; x < right; x++) {
+      if (matte[y * width + x] < 90) continue;
+
+      const dx = (x - faceCx) / Math.max(1, faceRx);
+      const dy = (y - faceCy) / Math.max(1, faceRy);
+      const inProtectedFace =
+        dx * dx + dy * dy <= 1;
+
+      if (!inProtectedFace) {
+        result[y * width + x] = matte[y * width + x];
+      }
+    }
+  }
+
+  return result;
+}
+
+
 async function loadFaceDetectorModel() {
   if (!faceDetectorModelPromise) {
     faceDetectorModelPromise = (async () => {
@@ -1129,6 +1385,39 @@ export async function POST(request: Request) {
     );
     const mask = maskResult.buffer;
 
+    let modnetMatte: Buffer | null = null;
+    let modnetHairCandidate: Buffer | null = null;
+    let modnetError: string | null = null;
+
+    try {
+      const modnet = await getModnetMatte(
+        sourceBuffer,
+        metadata.width,
+        metadata.height
+      );
+      modnetMatte = modnet.matte;
+
+      const faceForModnet = maskResult.diagnostic?.face;
+      if (faceForModnet) {
+        modnetHairCandidate = createModnetHairCandidate(
+          modnetMatte,
+          metadata.width,
+          metadata.height,
+          {
+            ...faceForModnet,
+            landmarks:
+              maskResult.diagnostic?.landmarks || null,
+          },
+          structure,
+          length
+        );
+      }
+    } catch (error) {
+      modnetError =
+        error instanceof Error ? error.message : String(error);
+      console.error("[PROFCOSMO] MODNet diagnostic failed:", error);
+    }
+
     const safeGeometricMask = createSafeGeometricMask(
       metadata.width,
       metadata.height,
@@ -1209,6 +1498,75 @@ export async function POST(request: Request) {
       .toBuffer();
 
     const diagnosticClassPreviews: Record<string, string> = {};
+
+    let modnetMatteView: string | null = null;
+    let modnetHairCandidateView: string | null = null;
+
+    if (modnetMatte) {
+      const mattePng = await sharp(modnetMatte, {
+        raw: {
+          width: metadata.width,
+          height: metadata.height,
+          channels: 1,
+        },
+      })
+        .png()
+        .toBuffer();
+
+      const matteOverlay = await sharp(sourceBuffer)
+        .composite([
+          {
+            input: await sharp(modnetMatte, {
+              raw: {
+                width: metadata.width,
+                height: metadata.height,
+                channels: 1,
+              },
+            })
+              .negate()
+              .blur(0.3)
+              .linear(0.65, 0)
+              .png()
+              .toBuffer(),
+            blend: "screen",
+          },
+        ])
+        .jpeg({ quality: 92 })
+        .toBuffer();
+
+      modnetMatteView =
+        `data:image/jpeg;base64,${matteOverlay.toString("base64")}`;
+
+      if (modnetHairCandidate) {
+        const candidateOverlay = await sharp(sourceBuffer)
+          .composite([
+            {
+              input: await sharp(modnetHairCandidate, {
+                raw: {
+                  width: metadata.width,
+                  height: metadata.height,
+                  channels: 1,
+                },
+              })
+                .negate()
+                .blur(0.3)
+                .linear(0.65, 0)
+                .png()
+                .toBuffer(),
+              blend: "screen",
+            },
+          ])
+          .jpeg({ quality: 92 })
+          .toBuffer();
+
+        modnetHairCandidateView =
+          `data:image/jpeg;base64,${candidateOverlay.toString("base64")}`;
+      }
+
+      void mattePng;
+    }
+
+
 
     if (maskResult.diagnosticClassMasks) {
       for (const cls of [14, 16, 17]) {
@@ -1328,7 +1686,10 @@ export async function POST(request: Request) {
       safeMask: `data:image/png;base64,${safeMaskView.toString("base64")}`,
       safeMaskPreview: `data:image/jpeg;base64,${safePreview.toString("base64")}`,
       safeMaskPng: `data:image/png;base64,${safeMaskPng.toString("base64")}`,
+      modnetMattePreview: modnetMatteView,
+      modnetHairCandidatePreview: modnetHairCandidateView,
       diagnostic: {
+
         diagnosticVersion: "scrfd-safe-geometric-1",
       hairClassIndex: HAIR_CLASS_INDEX,
         editablePixels: (() => {
@@ -1346,6 +1707,10 @@ export async function POST(request: Request) {
           ) / (metadata.width * metadata.height)) * 100).toFixed(3)
         ),
         ...(maskResult.diagnostic || {}),
+        modnet: {
+          available: Boolean(modnetMatte),
+          error: modnetError,
+        },
         safeGeometricMask: {
           usedLandmarks: safeGeometricMask.usedLandmarks,
           editablePixels: safeGeometricMask.alpha.reduce(
