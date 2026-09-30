@@ -587,6 +587,21 @@ async function getHairSegmentation(
     info: {
       width,
       height,
+      face: {
+        x1: Number(face.x1.toFixed(1)),
+        y1: Number(face.y1.toFixed(1)),
+        x2: Number(face.x2.toFixed(1)),
+        y2: Number(face.y2.toFixed(1)),
+        confidence: Number(face.confidence.toFixed(4)),
+      },
+      crop: {
+        left: cropLeft,
+        top: cropTop,
+        right: cropRight,
+        bottom: cropBottom,
+        width: cropWidth,
+        height: cropHeight,
+      },
       channels: 1,
       size: fullMask.length,
       parserOutputDims: dims,
@@ -892,20 +907,40 @@ export async function POST(request: Request) {
       .png()
       .toBuffer();
 
+    const faceInfo = maskResult.diagnostic?.face;
+    const cropInfo = maskResult.diagnostic?.crop;
+
+    const overlaySvg =
+      faceInfo && cropInfo
+        ? Buffer.from(`<svg width="${metadata.width}" height="${metadata.height}" xmlns="http://www.w3.org/2000/svg">
+            <rect x="${faceInfo.x1}" y="${faceInfo.y1}" width="${Math.max(1, faceInfo.x2-faceInfo.x1)}" height="${Math.max(1, faceInfo.y2-faceInfo.y1)}" fill="none" stroke="red" stroke-width="8"/>
+            <rect x="${cropInfo.left}" y="${cropInfo.top}" width="${cropInfo.width}" height="${cropInfo.height}" fill="none" stroke="yellow" stroke-width="6"/>
+          </svg>`)
+        : null;
+
+    const previewComposites: sharp.OverlayOptions[] = [
+      {
+        input: await sharp(mask)
+          .extractChannel("alpha")
+          .negate()
+          .blur(0.3)
+          .linear(0.55, 0)
+          .png()
+          .toBuffer(),
+        blend: "screen",
+      },
+    ];
+
+    if (overlaySvg) {
+      previewComposites.push({
+        input: overlaySvg,
+        blend: "over",
+      });
+    }
+
     const preview = await sharp(sourceBuffer)
       .resize(metadata.width, metadata.height)
-      .composite([
-        {
-          input: await sharp(mask)
-            .extractChannel("alpha")
-            .negate()
-            .blur(0.3)
-            .linear(0.55, 0)
-            .png()
-            .toBuffer(),
-          blend: "screen",
-        },
-      ])
+      .composite(previewComposites)
       .jpeg({ quality: 92 })
       .toBuffer();
 
