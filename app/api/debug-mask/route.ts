@@ -401,24 +401,45 @@ async function getHairSegmentation(
   const faceWidth = face.x2 - face.x1;
   const faceHeight = face.y2 - face.y1;
 
-  // Expand the detected face box into a head/hairstyle crop.
-  // The expansion is relative to the detected face, so different photo
-  // resolutions and framing are handled automatically.
+  // BiSeNet is trained on face-centered crops. Do not feed it a tall
+  // portrait region containing large amounts of clothing/background:
+  // that makes the parser confuse cloth/neck with hair.
+  //
+  // Use a square crop around the detected face, shifted slightly upward
+  // so the existing hairstyle is fully inside the crop while the face
+  // remains near the center of the parser input.
+  const cropSide = Math.min(
+    Math.max(faceHeight * 1.9, faceWidth * 2.2),
+    Math.min(width, height)
+  );
+
+  const faceCenterX = (face.x1 + face.x2) / 2;
+  const faceCenterY = (face.y1 + face.y2) / 2;
+
+  const cropCenterX = faceCenterX;
+  const cropCenterY = faceCenterY - faceHeight * 0.12;
+
   const cropLeft = Math.max(
     0,
-    Math.round(face.x1 - faceWidth * 0.55)
-  );
-  const cropRight = Math.min(
-    width,
-    Math.round(face.x2 + faceWidth * 0.55)
+    Math.min(
+      width - cropSide,
+      Math.round(cropCenterX - cropSide / 2)
+    )
   );
   const cropTop = Math.max(
     0,
-    Math.round(face.y1 - faceHeight * 0.95)
+    Math.min(
+      height - cropSide,
+      Math.round(cropCenterY - cropSide / 2)
+    )
+  );
+  const cropRight = Math.min(
+    width,
+    Math.round(cropLeft + cropSide)
   );
   const cropBottom = Math.min(
     height,
-    Math.round(face.y2 + faceHeight * 0.35)
+    Math.round(cropTop + cropSide)
   );
 
   const cropWidth = Math.max(
