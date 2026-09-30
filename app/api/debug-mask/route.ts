@@ -213,30 +213,30 @@ async function getHairSegmentation(
     .raw()
     .toBuffer();
 
-  const fullMask = await sharp({
-    create: {
+  const fullMask = Buffer.alloc(width * height, 0);
+
+  for (let y = 0; y < cropSize; y++) {
+    const targetY = cropTop + y;
+    if (targetY < 0 || targetY >= height) continue;
+
+    for (let x = 0; x < cropSize; x++) {
+      const targetX = cropLeft + x;
+      if (targetX < 0 || targetX >= width) continue;
+
+      fullMask[targetY * width + targetX] =
+        localMask[y * cropSize + x];
+    }
+  }
+
+  return {
+    data: fullMask,
+    info: {
       width,
       height,
       channels: 1,
-      background: 0,
+      size: fullMask.length,
     },
-  })
-    .composite([
-      {
-        input: localMask,
-        raw: {
-          width: cropSize,
-          height: cropSize,
-          channels: 1,
-        },
-        left: cropLeft,
-        top: cropTop,
-      },
-    ])
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-
-  return fullMask;
+  };
 }
 
 async function createHairMask(
