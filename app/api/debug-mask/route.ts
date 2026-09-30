@@ -252,6 +252,12 @@ async function getHairSegmentation(
       height,
       channels: 1,
       size: fullMask.length,
+      parserOutputDims: dims,
+      parserChannels: channels,
+      parserOutWidth: outWidth,
+      parserOutHeight: outHeight,
+      parserHairPixels: hairPixels,
+      parserTopClasses: classDistribution.slice(0, 8),
     },
   };
 }
@@ -526,16 +532,13 @@ export async function POST(request: Request) {
       mask: `data:image/png;base64,${maskView.toString("base64")}`,
       preview: `data:image/jpeg;base64,${preview.toString("base64")}`,
       diagnostic: {
-        outputDims: dims,
-        channels,
-        outWidth,
-        outHeight,
         hairClassIndex: HAIR_CLASS_INDEX,
-        hairPixels,
-        hairPercent: Number(
-          ((hairPixels / (outWidth * outHeight)) * 100).toFixed(3)
-        ),
-        topClasses: classDistribution.slice(0, 8),
+        parserOutputDims: (mask as any).info?.parserOutputDims ?? null,
+        parserChannels: (mask as any).info?.parserChannels ?? null,
+        parserOutWidth: (mask as any).info?.parserOutWidth ?? null,
+        parserOutHeight: (mask as any).info?.parserOutHeight ?? null,
+        hairPixels: (mask as any).info?.parserHairPixels ?? null,
+        topClasses: (mask as any).info?.parserTopClasses ?? [],
       },
     });
   } catch (error) {
