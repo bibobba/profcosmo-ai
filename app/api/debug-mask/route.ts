@@ -429,7 +429,6 @@ export async function POST(request: Request) {
             .png()
             .toBuffer(),
           blend: "screen",
-          opacity: 0.65,
         },
       ])
       .jpeg({ quality: 92 })
