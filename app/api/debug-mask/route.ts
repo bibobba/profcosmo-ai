@@ -424,7 +424,7 @@ export async function POST(request: Request) {
           input: await sharp(mask)
             .extractChannel("alpha")
             .negate()
-            .blur(0.2)
+            .blur(0.3)
             .linear(0.55, 0)
             .png()
             .toBuffer(),
