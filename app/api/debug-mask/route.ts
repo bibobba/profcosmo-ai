@@ -518,8 +518,35 @@ export async function POST(request: Request) {
 
     // Diagnostic view:
     // white = editable hair zone, black = protected source pixels.
-    const maskView = await sharp(mask)
+    const { data: maskAlpha } = await sharp(mask)
       .extractChannel("alpha")
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    let editablePixels = 0;
+    for (const value of maskAlpha) {
+      if (value < 128) editablePixels++;
+    }
+
+    console.log(
+      "[PROFCOSMO] final diagnostic mask:",
+      {
+        width: metadata.width,
+        height: metadata.height,
+        editablePixels,
+        editablePercent: Number(
+          ((editablePixels / (metadata.width * metadata.height)) * 100).toFixed(3)
+        ),
+      }
+    );
+
+    const maskView = await sharp(maskAlpha, {
+      raw: {
+        width: metadata.width,
+        height: metadata.height,
+        channels: 1,
+      },
+    })
       .negate()
       .png()
       .toBuffer();
@@ -549,6 +576,20 @@ export async function POST(request: Request) {
       preview: `data:image/jpeg;base64,${preview.toString("base64")}`,
       diagnostic: {
         hairClassIndex: HAIR_CLASS_INDEX,
+        editablePixels: (() => {
+          const alpha = maskAlpha;
+          let count = 0;
+          for (const value of alpha) {
+            if (value < 128) count++;
+          }
+          return count;
+        })(),
+        editablePercent: Number(
+          ((maskAlpha.reduce(
+            (count, value) => count + (value < 128 ? 1 : 0),
+            0
+          ) / (metadata.width * metadata.height)) * 100).toFixed(3)
+        ),
         ...(maskResult.diagnostic || {}),
       },
     });
