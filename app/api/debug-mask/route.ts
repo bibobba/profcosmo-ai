@@ -346,19 +346,12 @@ async function createHairMask(
       )
     );
 
-    const expanded = await sharp(
-      segmentation.data,
-      {
-        raw: {
-          width,
-          height,
-          channels: 1,
-        },
-      }
-    )
-      .dilate(expansionPixels)
-      .raw()
-      .toBuffer();
+    void expansionPixels;
+
+    // The segmentation result is already a binary full-resolution mask.
+    // Do not run a second Sharp dilation here: it can destroy the 1-channel
+    // binary mask in this runtime. Keep the verified segmentation unchanged.
+    const expanded = Buffer.from(segmentation.data);
 
     hairPixelsAfterDilation = 0;
     for (const value of expanded) {
