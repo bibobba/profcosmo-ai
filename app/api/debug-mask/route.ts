@@ -146,6 +146,95 @@ async function getModnetSession() {
   return modnetSessionPromise;
 }
 
+const MOBILE_HAIRNET_MODEL_URL =
+  "https://github.com/clibdev/mobile-hair-segmentation-pytorch/releases/latest/download/mobile-hair-net-v2.onnx";
+const MOBILE_HAIRNET_MODEL_PATH =
+  "/tmp/profcosmo-mobile-hairnet-v2.onnx";
+
+let mobileHairNetSessionPromise: Promise<ort.InferenceSession> | null = null;
+let mobileHairNetModelPromise: Promise<Buffer> | null = null;
+
+async function loadMobileHairNetModel() {
+  if (!mobileHairNetModelPromise) {
+    mobileHairNetModelPromise = (async () => {
+      try {
+        const fs = await import("node:fs/promises");
+        const existing = await fs.stat(MOBILE_HAIRNET_MODEL_PATH);
+        if (existing.size > 5_000_000) return fs.readFile(MOBILE_HAIRNET_MODEL_PATH);
+      } catch {}
+      const response = await fetch(MOBILE_HAIRNET_MODEL_URL);
+      if (!response.ok) throw new Error(`Не удалось загрузить MobileHairNet V2: HTTP ${response.status}`);
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length < 5_000_000) throw new Error("Файл MobileHairNet V2 повреждён или слишком мал.");
+      const fs = await import("node:fs/promises");
+      await fs.writeFile(MOBILE_HAIRNET_MODEL_PATH, buffer);
+      return buffer;
+    })();
+  }
+  return mobileHairNetModelPromise;
+}
+
+async function getMobileHairNetSession() {
+  if (!mobileHairNetSessionPromise) {
+    mobileHairNetSessionPromise = (async () => {
+      const model = await loadMobileHairNetModel();
+      return ort.InferenceSession.create(model, {
+        executionProviders: ["cpu"],
+        graphOptimizationLevel: "all",
+      });
+    })();
+  }
+  return mobileHairNetSessionPromise;
+}
+
+async function getMobileHairNetMask(sourceBuffer: Buffer, width: number, height: number) {
+  const inputSize = 224;
+  const { data: rgb } = await sharp(sourceBuffer)
+    .rotate()
+    .resize(inputSize, inputSize, { fit: "fill" })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const input = new Float32Array(1 * 3 * inputSize * inputSize);
+  const plane = inputSize * inputSize;
+  for (let i = 0; i < plane; i++) {
+    input[i] = (rgb[i * 3] / 255 - 0.5) / 0.5;
+    input[plane + i] = (rgb[i * 3 + 1] / 255 - 0.5) / 0.5;
+    input[plane * 2 + i] = (rgb[i * 3 + 2] / 255 - 0.5) / 0.5;
+  }
+
+  const session = await getMobileHairNetSession();
+  const outputs = await session.run({
+    [session.inputNames[0]]: new ort.Tensor("float32", input, [1, 3, inputSize, inputSize]),
+  });
+  const output = outputs[session.outputNames[0]];
+  if (!output?.data || !output.dims) throw new Error("MobileHairNet V2 не вернул маску волос.");
+
+  const dims = output.dims.map(Number);
+  if (dims.length !== 4 || dims[1] < 2) {
+    throw new Error(`Неожиданная форма выхода MobileHairNet V2: [${dims.join(", ")}]`);
+  }
+  const channels = dims[1], outHeight = dims[2], outWidth = dims[3];
+  const values = output.data as Float32Array | number[];
+  const small = Buffer.alloc(outWidth * outHeight);
+  for (let y = 0; y < outHeight; y++) {
+    for (let x = 0; x < outWidth; x++) {
+      const pixel = y * outWidth + x;
+      let bestClass = 0, bestScore = -Infinity;
+      for (let cls = 0; cls < channels; cls++) {
+        const score = Number(values[cls * outHeight * outWidth + pixel]);
+        if (score > bestScore) { bestScore = score; bestClass = cls; }
+      }
+      small[pixel] = bestClass > 0 ? 255 : 0;
+    }
+  }
+  const mask = await sharp(small, {
+    raw: { width: outWidth, height: outHeight, channels: 1 },
+  }).resize(width, height, { fit: "fill", kernel: "nearest" }).raw().toBuffer();
+  return { mask, outputDims: dims };
+}
+
 async function getModnetMatte(
   sourceBuffer: Buffer,
   width: number,
@@ -1418,6 +1507,19 @@ export async function POST(request: Request) {
       console.error("[PROFCOSMO] MODNet diagnostic failed:", error);
     }
 
+    let mobileHairNetMask: Buffer | null = null;
+    let mobileHairNetError: string | null = null;
+    let mobileHairNetDims: number[] | null = null;
+
+    try {
+      const result = await getMobileHairNetMask(sourceBuffer, metadata.width, metadata.height);
+      mobileHairNetMask = result.mask;
+      mobileHairNetDims = result.outputDims;
+    } catch (error) {
+      mobileHairNetError = error instanceof Error ? error.message : String(error);
+      console.error("[PROFCOSMO] MobileHairNet diagnostic failed:", error);
+    }
+
     const safeGeometricMask = createSafeGeometricMask(
       metadata.width,
       metadata.height,
@@ -1496,6 +1598,25 @@ export async function POST(request: Request) {
       ])
       .jpeg({ quality: 92 })
       .toBuffer();
+
+    let mobileHairNetPreview: string | null = null;
+    let mobileHairNetCleanMask: string | null = null;
+
+    if (mobileHairNetMask) {
+      const clean = await sharp(mobileHairNetMask, {
+        raw: { width: metadata.width, height: metadata.height, channels: 1 },
+      }).png().toBuffer();
+      mobileHairNetCleanMask = `data:image/png;base64,${clean.toString("base64")}`;
+
+      const overlay = await sharp(sourceBuffer).composite([{
+        input: await sharp(mobileHairNetMask, {
+          raw: { width: metadata.width, height: metadata.height, channels: 1 },
+        }).png().toBuffer(),
+        blend: "screen",
+      }]).jpeg({ quality: 92 }).toBuffer();
+
+      mobileHairNetPreview = `data:image/jpeg;base64,${overlay.toString("base64")}`;
+    }
 
     const diagnosticClassPreviews: Record<string, string> = {};
 
@@ -1688,6 +1809,8 @@ export async function POST(request: Request) {
       safeMaskPng: `data:image/png;base64,${safeMaskPng.toString("base64")}`,
       modnetMattePreview: modnetMatteView,
       modnetHairCandidatePreview: modnetHairCandidateView,
+      mobileHairNetPreview,
+      mobileHairNetCleanMask,
       diagnostic: {
 
         diagnosticVersion: "scrfd-safe-geometric-1",
@@ -1710,6 +1833,14 @@ export async function POST(request: Request) {
         modnet: {
           available: Boolean(modnetMatte),
           error: modnetError,
+        },
+        mobileHairNet: {
+          available: Boolean(mobileHairNetMask),
+          error: mobileHairNetError,
+          outputDims: mobileHairNetDims,
+          editablePixels: mobileHairNetMask
+            ? mobileHairNetMask.reduce((count, value) => count + (value >= 128 ? 1 : 0), 0)
+            : 0,
         },
         safeGeometricMask: {
           usedLandmarks: safeGeometricMask.usedLandmarks,

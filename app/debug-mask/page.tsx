@@ -112,6 +112,23 @@ export default function DebugMaskPage() {
               style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
             />
 
+            <h2>Новый тест: MobileHairNet V2</h2>
+            <p>Отдельная модель именно для сегментации волос. Production пока её не использует.</p>
+            {result.mobileHairNetPreview ? (
+              <>
+                <h3>MobileHairNet V2 — маска поверх оригинала</h3>
+                <img src={result.mobileHairNetPreview} alt="MobileHairNet V2 hair mask"
+                  style={{ maxWidth: "100%", display: "block", borderRadius: 12 }} />
+                <h3>Чистая маска волос</h3>
+                <img src={result.mobileHairNetCleanMask} alt="MobileHairNet V2 clean hair mask"
+                  style={{ maxWidth: "100%", display: "block", borderRadius: 12 }} />
+              </>
+            ) : (
+              <pre style={{ whiteSpace: "pre-wrap", color: "#b00020" }}>
+                MobileHairNet не запустился: {result.diagnostic?.mobileHairNet?.error || "неизвестная ошибка"}
+              </pre>
+            )}
+
             <h2>Новый тест: MODNet portrait matting</h2>
             <p>
               Здесь проверяем только качество новой маски. Production-генерация
