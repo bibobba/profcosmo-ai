@@ -4,14 +4,9 @@ import { useState } from "react";
 
 export default function DebugMaskPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [gender, setGender] = useState("male");
-  const [length, setLength] = useState("short");
-  const [structure, setStructure] = useState("afro-curls");
-  const [mask, setMask] = useState("");
-  const [preview, setPreview] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [diagnostic, setDiagnostic] = useState<any>(null);
+  const [result, setResult] = useState<any>(null);
 
   async function run() {
     if (!file) {
@@ -21,15 +16,13 @@ export default function DebugMaskPage() {
 
     setLoading(true);
     setError("");
-    setMask("");
-    setPreview("");
-    setDiagnostic(null);
+    setResult(null);
 
     const formData = new FormData();
     formData.append("image", file);
-    formData.append("gender", gender);
-    formData.append("length", length);
-    formData.append("structure", structure);
+    formData.append("gender", "male");
+    formData.append("length", "short");
+    formData.append("structure", "afro-curls");
 
     try {
       const response = await fetch("/api/debug-mask", {
@@ -40,12 +33,10 @@ export default function DebugMaskPage() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || "Ошибка диагностики.");
+        throw new Error(data.error || `HTTP ${response.status}`);
       }
 
-      setMask(data.mask);
-      setPreview(data.preview);
-      setDiagnostic(data.diagnostic || null);
+      setResult(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка диагностики.");
     } finally {
@@ -64,139 +55,63 @@ export default function DebugMaskPage() {
       }}
     >
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <h1 style={{ marginBottom: 8 }}>PROFCOSMO AI — проверка маски</h1>
-        <p style={{ marginTop: 0, color: "#555" }}>
-          Диагностический экран. Рабочую генерацию не меняет.
-        </p>
+        <h1>PROFCOSMO AI — проверка маски</h1>
+        <p>Тестовый экран. Основную генерацию не меняет.</p>
 
-        <div
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            setFile(e.target.files?.[0] || null);
+            setError("");
+          }}
+        />
+
+        <button
+          onClick={run}
+          disabled={loading}
           style={{
-            background: "#fff",
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 24,
+            display: "block",
+            marginTop: 16,
+            padding: "12px 20px",
+            border: 0,
+            borderRadius: 10,
+            background: "#111",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: loading ? "wait" : "pointer",
           }}
         >
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
+          {loading ? "Проверяю…" : "Проверить маску"}
+        </button>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              flexWrap: "wrap",
-              marginTop: 16,
-            }}
-          >
-            <label>
-              Пол{" "}
-              <select value={gender} onChange={(e) => setGender(e.target.value)}>
-                <option value="male">Мужской</option>
-                <option value="female">Женский</option>
-              </select>
-            </label>
+        {error && (
+          <pre style={{ marginTop: 20, color: "#b00020", whiteSpace: "pre-wrap" }}>
+            {error}
+          </pre>
+        )}
 
-            <label>
-              Длина{" "}
-              <select value={length} onChange={(e) => setLength(e.target.value)}>
-                <option value="very-short">Очень короткие</option>
-                <option value="short">Короткие</option>
-                <option value="medium">Средние</option>
-                <option value="below-shoulders">Ниже плеч</option>
-                <option value="long">Длинные</option>
-              </select>
-            </label>
+        {result && (
+          <div style={{ marginTop: 24 }}>
+            <h2>Диагностика</h2>
+            <pre style={{ whiteSpace: "pre-wrap" }}>
+              {JSON.stringify(result.diagnostic, null, 2)}
+            </pre>
 
-            <label>
-              Структура{" "}
-              <select value={structure} onChange={(e) => setStructure(e.target.value)}>
-                <option value="straight">Прямые</option>
-                <option value="wavy">Волнистые</option>
-                <option value="curly">Кудрявые</option>
-                <option value="afro-curls">Афро-кудри</option>
-              </select>
-            </label>
-          </div>
-
-          <button
-            onClick={run}
-            disabled={loading}
-            style={{
-              marginTop: 18,
-              padding: "12px 20px",
-              border: 0,
-              borderRadius: 10,
-              background: "#111",
-              color: "#fff",
-              cursor: loading ? "wait" : "pointer",
-              fontWeight: 700,
-            }}
-          >
-            {loading ? "Строю маску…" : "Проверить маску"}
-          </button>
-
-          {error && (
-            <div style={{ marginTop: 14, color: "#b00020" }}>{error}</div>
-          )}
-        </div>
-
-        {preview && (
-          <section style={{ marginBottom: 24 }}>
-            <h2>Маска поверх исходного фото</h2>
-            <p style={{ color: "#555" }}>
-              Светлая область показывает зону, которую система считает допустимой для изменения.
-            </p>
+            <h2>Маска поверх фото</h2>
             <img
-              src={preview}
-              alt="Диагностическая маска поверх исходного фото"
+              src={result.preview}
+              alt="Диагностическая маска"
               style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
             />
-          </section>
-        )}
 
-        {diagnostic && (
-          <section
-            style={{
-              marginBottom: 24,
-              background: "#fff",
-              borderRadius: 12,
-              padding: 20,
-            }}
-          >
-            <h2>Диагностика ONNX</h2>
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                fontSize: 14,
-                lineHeight: 1.5,
-              }}
-            >
-{JSON.stringify(diagnostic, null, 2)}
-            </pre>
-          </section>
-        )}
-
-        {mask && (
-          <section>
             <h2>Чистая маска</h2>
-            <p style={{ color: "#555" }}>
-              Белое = можно изменять. Чёрное = должно оставаться защищённым.
-            </p>
             <img
-              src={mask}
+              src={result.mask}
               alt="Чистая маска волос"
-              style={{
-                maxWidth: "100%",
-                display: "block",
-                borderRadius: 12,
-                background: "#888",
-              }}
+              style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
             />
-          </section>
+          </div>
         )}
       </div>
     </main>
