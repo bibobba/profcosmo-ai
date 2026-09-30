@@ -97,7 +97,7 @@ async function loadFaceDetectorModel() {
       const response = await fetch(FACE_DETECTOR_MODEL_URL);
       if (!response.ok) {
         throw new Error(
-          \`Не удалось загрузить SCRFD: HTTP \${response.status}\`
+          `Не удалось загрузить SCRFD: HTTP \${response.status}`
         );
       }
 
