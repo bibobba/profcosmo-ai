@@ -1570,11 +1570,16 @@ export async function POST(request: Request) {
     } | null = null;
 
     try {
+      const faceForMobileHairNet = maskResult.diagnostic?.face;
+      if (!faceForMobileHairNet) {
+        throw new Error("SCRFD не вернул координаты лица для MobileHairNet.");
+      }
+
       const result = await getMobileHairNetMask(
         sourceBuffer,
         metadata.width,
         metadata.height,
-        face
+        faceForMobileHairNet
       );
       mobileHairNetMask = result.mask;
       mobileHairNetDims = result.outputDims;
