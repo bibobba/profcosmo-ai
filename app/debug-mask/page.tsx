@@ -105,12 +105,36 @@ export default function DebugMaskPage() {
               style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
             />
 
-            <h2>Чистая маска</h2>
+            <h2>Чистая маска волос (класс 17)</h2>
             <img
               src={result.mask}
               alt="Чистая маска волос"
               style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
             />
+
+            <h2>Сравнение классов BiSeNet</h2>
+            <p>
+              Здесь показываем отдельно классы 14, 16 и 17. Белая область —
+              то, что BiSeNet отнёс к соответствующему классу.
+            </p>
+            {[14, 16, 17].map((cls) => (
+              <div key={cls} style={{ marginTop: 24 }}>
+                <h3>Класс {cls}</h3>
+                {result.diagnosticClassPreviews?.[String(cls)] ? (
+                  <img
+                    src={result.diagnosticClassPreviews[String(cls)]}
+                    alt={`Диагностика класса ${cls}`}
+                    style={{
+                      maxWidth: "100%",
+                      display: "block",
+                      borderRadius: 12,
+                    }}
+                  />
+                ) : (
+                  <p>Предпросмотр не получен.</p>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
