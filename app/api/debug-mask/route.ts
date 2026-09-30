@@ -263,6 +263,7 @@ async function detectLargestFace(
 
   const scoresByLevel = outputValues.slice(0, 3);
   const boxesByLevel = outputValues.slice(3, 6);
+  const landmarksByLevel = outputValues.slice(6, 9);
 
   const strides = [8, 16, 32];
   const numAnchors = 2;
@@ -271,6 +272,7 @@ async function detectLargestFace(
   const detections: Array<
     [number, number, number, number, number]
   > = [];
+  const detectionLandmarks: Array<Array<[number, number]> | null> = [];
 
   /*
    * sharp(..., fit: "contain") centers the resized image inside the
@@ -295,6 +297,7 @@ async function detectLargestFace(
     const stride = strides[level];
     const scoresTensor = scoresByLevel[level];
     const boxesTensor = boxesByLevel[level];
+    const landmarksTensor = landmarksByLevel[level];
 
     if (!scoresTensor?.data || !boxesTensor?.data) {
       continue;
@@ -337,6 +340,35 @@ async function detectLargestFace(
           distances
         );
 
+        let landmarks: Array<[number, number]> | null = null;
+
+        if (landmarksTensor?.data) {
+          const landmarkValues = landmarksTensor.data as
+            | Float32Array
+            | number[];
+          const landmarkOffset = index * 10;
+          const decoded: Array<[number, number]> = [];
+
+          for (let point = 0; point < 5; point++) {
+            const dx =
+              Number(landmarkValues[landmarkOffset + point * 2]) *
+              stride;
+            const dy =
+              Number(landmarkValues[landmarkOffset + point * 2 + 1]) *
+              stride;
+
+            const px = x + dx;
+            const py = y + dy;
+
+            decoded.push([
+              Math.max(0, Math.min(width, (px - padX) / resizeFactor)),
+              Math.max(0, Math.min(height, (py - padY) / resizeFactor)),
+            ]);
+          }
+
+          landmarks = decoded;
+        }
+
         detections.push([
           Math.max(0, (box[0] - padX) / resizeFactor),
           Math.max(0, (box[1] - padY) / resizeFactor),
@@ -344,6 +376,7 @@ async function detectLargestFace(
           Math.min(height, (box[3] - padY) / resizeFactor),
           score,
         ]);
+        detectionLandmarks.push(landmarks);
       }
     }
   }
@@ -356,7 +389,8 @@ async function detectLargestFace(
 
   const keep = nmsBoxes(detections, 0.4);
 
-  let best = detections[keep[0]];
+  let bestIndex = keep[0];
+  let best = detections[bestIndex];
 
   for (const index of keep) {
     const candidate = detections[index];
@@ -371,6 +405,7 @@ async function detectLargestFace(
 
     if (candidateArea > bestArea) {
       best = candidate;
+      bestIndex = index;
     }
   }
 
@@ -380,6 +415,7 @@ async function detectLargestFace(
     x2: best[2],
     y2: best[3],
     confidence: best[4],
+    landmarks: detectionLandmarks[bestIndex] || null,
   };
 }
 
@@ -663,6 +699,161 @@ async function getHairSegmentation(
   };
 }
 
+function createSafeGeometricMask(
+  width: number,
+  height: number,
+  face: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    confidence: number;
+    landmarks?: Array<[number, number]> | null;
+  },
+  structure: string,
+  length: string
+) {
+  const alpha = Buffer.alloc(width * height, 255);
+
+  const landmarks = face.landmarks;
+
+  if (!landmarks || landmarks.length < 5) {
+    return {
+      alpha,
+      usedLandmarks: false,
+    };
+  }
+
+  const [leftEye, rightEye, nose, leftMouth, rightMouth] = landmarks;
+
+  const eyeMidX = (leftEye[0] + rightEye[0]) / 2;
+  const featureWidth = Math.max(
+    1,
+    Math.abs(rightEye[0] - leftEye[0])
+  );
+  const featureTop = Math.min(
+    leftEye[1],
+    rightEye[1],
+    nose[1],
+    leftMouth[1],
+    rightMouth[1]
+  );
+  const featureBottom = Math.max(
+    leftEye[1],
+    rightEye[1],
+    nose[1],
+    leftMouth[1],
+    rightMouth[1]
+  );
+  const featureHeight = Math.max(
+    1,
+    featureBottom - featureTop
+  );
+
+  const afro = structure === "afro-curls";
+  const longHair =
+    length === "below-shoulders" ||
+    length === "long";
+
+  /*
+   * The inner ellipse is a hard face-protection boundary.
+   * The outer zones are intentionally geometric and conservative:
+   * crown + side hair area only. This is a diagnostic mask, not yet
+   * the production hair mask.
+   */
+  const faceCx = eyeMidX;
+  const faceCy =
+    (featureTop + featureBottom) / 2 +
+    featureHeight * 0.10;
+  const faceRx =
+    featureWidth * (afro ? 0.78 : 0.72);
+  const faceRy =
+    featureHeight * (afro ? 0.95 : 0.90);
+
+  const crownRx =
+    featureWidth * (afro ? 1.35 : 1.15);
+  const crownTop =
+    featureTop -
+    featureHeight * (afro ? 1.05 : 0.85);
+  const crownBottom =
+    featureTop +
+    featureHeight * (afro ? 0.95 : 0.80);
+
+  const sideRx =
+    featureWidth * (afro ? 1.50 : 1.30);
+  const sideInnerRx =
+    featureWidth * (afro ? 0.55 : 0.65);
+  const sideTop =
+    featureTop -
+    featureHeight * 0.15;
+  const sideBottom =
+    featureBottom +
+    featureHeight * (longHair ? 1.80 : 0.20);
+
+  const setEditable = (
+    x: number,
+    y: number,
+    editable: boolean
+  ) => {
+    if (
+      x < 0 ||
+      x >= width ||
+      y < 0 ||
+      y >= height
+    ) {
+      return;
+    }
+
+    if (editable) {
+      alpha[y * width + x] = 0;
+    }
+  };
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const nx = (x - faceCx) / Math.max(1, crownRx);
+      const ny =
+        (y - (crownTop + crownBottom) / 2) /
+        Math.max(1, (crownBottom - crownTop) / 2);
+
+      const inCrown = nx * nx + ny * ny <= 1;
+
+      const faceDx =
+        (x - faceCx) / Math.max(1, faceRx);
+      const faceDy =
+        (y - faceCy) / Math.max(1, faceRy);
+      const inProtectedFace =
+        faceDx * faceDx +
+          faceDy * faceDy <=
+        1;
+
+      const leftSide =
+        x >= faceCx - sideRx &&
+        x <= faceCx - sideInnerRx &&
+        y >= sideTop &&
+        y <= sideBottom;
+
+      const rightSide =
+        x <= faceCx + sideRx &&
+        x >= faceCx + sideInnerRx &&
+        y >= sideTop &&
+        y <= sideBottom;
+
+      setEditable(
+        x,
+        y,
+        (inCrown || leftSide || rightSide) &&
+          !inProtectedFace
+      );
+    }
+  }
+
+  return {
+    alpha,
+    usedLandmarks: true,
+  };
+}
+
 async function createHairMask(
   width: number,
   height: number,
@@ -926,6 +1117,85 @@ export async function POST(request: Request) {
     );
     const mask = maskResult.buffer;
 
+    const safeGeometricMask = createSafeGeometricMask(
+      metadata.width,
+      metadata.height,
+      maskResult.diagnostic?.face
+        ? {
+            ...maskResult.diagnostic.face,
+            landmarks:
+              maskResult.diagnostic.landmarks || null,
+          }
+        : {
+            x1: 0,
+            y1: 0,
+            x2: metadata.width,
+            y2: metadata.height,
+            confidence: 0,
+            landmarks: null,
+          },
+      structure,
+      length
+    );
+
+    const safeMaskRgba = Buffer.alloc(
+      metadata.width * metadata.height * 4
+    );
+
+    for (let i = 0; i < safeGeometricMask.alpha.length; i++) {
+      const offset = i * 4;
+      safeMaskRgba[offset] = 255;
+      safeMaskRgba[offset + 1] = 255;
+      safeMaskRgba[offset + 2] = 255;
+      safeMaskRgba[offset + 3] =
+        safeGeometricMask.alpha[i];
+    }
+
+    const safeMaskPng = await sharp(safeMaskRgba, {
+      raw: {
+        width: metadata.width,
+        height: metadata.height,
+        channels: 4,
+      },
+    })
+      .png()
+      .toBuffer();
+
+    const safeMaskView = await sharp(
+      safeGeometricMask.alpha,
+      {
+        raw: {
+          width: metadata.width,
+          height: metadata.height,
+          channels: 1,
+        },
+      }
+    )
+      .negate()
+      .png()
+      .toBuffer();
+
+    const safePreview = await sharp(sourceBuffer)
+      .composite([
+        {
+          input: await sharp(safeGeometricMask.alpha, {
+            raw: {
+              width: metadata.width,
+              height: metadata.height,
+              channels: 1,
+            },
+          })
+            .negate()
+            .blur(0.3)
+            .linear(0.55, 0)
+            .png()
+            .toBuffer(),
+          blend: "screen",
+        },
+      ])
+      .jpeg({ quality: 92 })
+      .toBuffer();
+
     const diagnosticClassPreviews: Record<string, string> = {};
 
     if (maskResult.diagnosticClassMasks) {
@@ -1043,8 +1313,11 @@ export async function POST(request: Request) {
       height: metadata.height,
       mask: `data:image/png;base64,${maskView.toString("base64")}`,
       preview: `data:image/jpeg;base64,${preview.toString("base64")}`,
+      safeMask: `data:image/png;base64,${safeMaskView.toString("base64")}`,
+      safeMaskPreview: `data:image/jpeg;base64,${safePreview.toString("base64")}`,
+      safeMaskPng: `data:image/png;base64,${safeMaskPng.toString("base64")}`,
       diagnostic: {
-        diagnosticVersion: "scrfd-debug-2",
+        diagnosticVersion: "scrfd-safe-geometric-1",
       hairClassIndex: HAIR_CLASS_INDEX,
         editablePixels: (() => {
           const alpha = maskAlpha;
@@ -1061,6 +1334,13 @@ export async function POST(request: Request) {
           ) / (metadata.width * metadata.height)) * 100).toFixed(3)
         ),
         ...(maskResult.diagnostic || {}),
+        safeGeometricMask: {
+          usedLandmarks: safeGeometricMask.usedLandmarks,
+          editablePixels: safeGeometricMask.alpha.reduce(
+            (count, value) => count + (value < 128 ? 1 : 0),
+            0
+          ),
+        },
       },
       diagnosticClassPreviews,
     });
