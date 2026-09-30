@@ -9,7 +9,7 @@ export const maxDuration = 120;
 const HAIR_PARSER_MODEL_URL =
   "https://github.com/yakhyo/face-parsing/releases/download/weights/resnet18.onnx";
 const HAIR_PARSER_MODEL_PATH =
-  "/tmp/profcosmo-parsing-resnet18.onnx";
+  "/tmp/profcosmo-parsing-resnet18-yakhyo-v1.onnx";
 const HAIR_CLASS_INDEX = 17; // yakhyo/CelebAMask-HQ: hair
 
 let hairParserSessionPromise: Promise<ort.InferenceSession> | null = null;
