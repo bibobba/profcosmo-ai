@@ -881,45 +881,6 @@ export async function POST(request: Request) {
     const image = formData.get("image");
 
     if (!(image instanceof File)) {
-      const diagnosticClassPreviews: Record<string, string> = {};
-
-    if (maskResult.diagnosticClassMasks) {
-      for (const cls of [14, 16, 17]) {
-        const classMask = maskResult.diagnosticClassMasks[cls];
-        if (!classMask) continue;
-
-        const rgba = Buffer.alloc(metadata.width * metadata.height * 4);
-        for (let i = 0; i < classMask.length; i++) {
-          const offset = i * 4;
-          rgba[offset] = 255;
-          rgba[offset + 1] = 255;
-          rgba[offset + 2] = 255;
-          rgba[offset + 3] = classMask[i];
-        }
-
-        const overlay = await sharp(sourceBuffer)
-          .composite([
-            {
-              input: await sharp(rgba, {
-                raw: {
-                  width: metadata.width,
-                  height: metadata.height,
-                  channels: 4,
-                },
-              })
-                .png()
-                .toBuffer(),
-              blend: "screen",
-            },
-          ])
-          .jpeg({ quality: 90 })
-          .toBuffer();
-
-        diagnosticClassPreviews[String(cls)] =
-          `data:image/jpeg;base64,${overlay.toString("base64")}`;
-      }
-    }
-
     return NextResponse.json(
         { error: "Загрузите фотографию." },
         { status: 400 }
@@ -958,6 +919,45 @@ export async function POST(request: Request) {
       })
     );
     const mask = maskResult.buffer;
+
+    const diagnosticClassPreviews: Record<string, string> = {};
+
+    if (maskResult.diagnosticClassMasks) {
+      for (const cls of [14, 16, 17]) {
+        const classMask = maskResult.diagnosticClassMasks[cls];
+        if (!classMask) continue;
+
+        const rgba = Buffer.alloc(metadata.width * metadata.height * 4);
+        for (let i = 0; i < classMask.length; i++) {
+          const offset = i * 4;
+          rgba[offset] = 255;
+          rgba[offset + 1] = 255;
+          rgba[offset + 2] = 255;
+          rgba[offset + 3] = classMask[i];
+        }
+
+        const overlay = await sharp(sourceBuffer)
+          .composite([
+            {
+              input: await sharp(rgba, {
+                raw: {
+                  width: metadata.width,
+                  height: metadata.height,
+                  channels: 4,
+                },
+              })
+                .png()
+                .toBuffer(),
+              blend: "screen",
+            },
+          ])
+          .jpeg({ quality: 90 })
+          .toBuffer();
+
+        diagnosticClassPreviews[String(cls)] =
+          `data:image/jpeg;base64,${overlay.toString("base64")}`;
+      }
+    }
 
     // Diagnostic view:
     // white = editable hair zone, black = protected source pixels.
@@ -1056,6 +1056,7 @@ export async function POST(request: Request) {
         ),
         ...(maskResult.diagnostic || {}),
       },
+      diagnosticClassPreviews,
     });
   } catch (error) {
     console.error("[PROFCOSMO] debug mask error:", error);
