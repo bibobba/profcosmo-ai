@@ -81,51 +81,12 @@ async function getHairSegmentation(
     await sourceFile.arrayBuffer()
   );
 
-  /*
-   * BiSeNet face parsing is trained/evaluated on face-centred crops.
-   * The previous diagnostic fed the entire portrait into 512x512, making
-   * the face too small for reliable hair classification.
-   *
-   * For this diagnostic we first take a large, centred head/face crop,
-   * run BiSeNet there, then map the hair mask back to the original image.
-   * This changes only the diagnostic parser input; the production route
-   * remains untouched until we validate the result.
-   */
-  const cropSize = Math.max(
-    256,
-    Math.min(
-      width,
-      height,
-      Math.round(
-        Math.min(width, height) * 0.90
-      )
-    )
-  );
-
-  const cropLeft = Math.max(
-    0,
-    Math.round((width - cropSize) / 2)
-  );
-
-  const portrait = height >= width;
-  const cropTop = Math.max(
-    0,
-    Math.min(
-      height - cropSize,
-      Math.round(
-        height * (portrait ? 0.02 : 0.05)
-      )
-    )
-  );
-
+  // Match the official yakhyo/face-parsing inference pipeline:
+  // resize the complete RGB image to 512x512, normalize with ImageNet
+  // statistics, run BiSeNet, argmax the 19 classes, then resize the
+  // semantic mask back to the original image dimensions.
   const { data: rgb } = await sharp(sourceBuffer)
     .rotate()
-    .extract({
-      left: cropLeft,
-      top: cropTop,
-      width: cropSize,
-      height: cropSize,
-    })
     .resize(512, 512, {
       fit: "fill",
     })
@@ -133,7 +94,6 @@ async function getHairSegmentation(
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  // yakhyo's BiSeNet preprocessing: RGB, [0..1], ImageNet normalization.
   const mean = [0.485, 0.456, 0.406];
   const std = [0.229, 0.224, 0.225];
   const input = new Float32Array(1 * 3 * 512 * 512);
@@ -150,12 +110,18 @@ async function getHairSegmentation(
   const session = await getHairParserSession();
   const inputName = session.inputNames[0];
   const outputs = await session.run({
-    [inputName]: new ort.Tensor("float32", input, [1, 3, 512, 512]),
+    [inputName]: new ort.Tensor(
+      "float32",
+      input,
+      [1, 3, 512, 512]
+    ),
   });
 
   const output = outputs[session.outputNames[0]];
   if (!output?.data || !output.dims) {
-    throw new Error("BiSeNet не вернул карту сегментации.");
+    throw new Error(
+      "BiSeNet не вернул карту сегментации."
+    );
   }
 
   const dims = output.dims.map(Number);
@@ -168,6 +134,7 @@ async function getHairSegmentation(
   const channels = dims[1];
   const outHeight = dims[2];
   const outWidth = dims[3];
+
   if (channels <= HAIR_CLASS_INDEX) {
     throw new Error(
       `В выходе BiSeNet нет класса волос: каналов ${channels}.`
@@ -175,22 +142,27 @@ async function getHairSegmentation(
   }
 
   const values = output.data as Float32Array | number[];
-
-  // Diagnostic only: record the actual class distribution returned by ONNX.
   const classCounts = new Array<number>(channels).fill(0);
-
-  const hairMask = Buffer.alloc(outWidth * outHeight);
+  const hairMask = Buffer.alloc(
+    outWidth * outHeight,
+    0
+  );
 
   for (let y = 0; y < outHeight; y++) {
     for (let x = 0; x < outWidth; x++) {
-      const pixel = y * outWidth + x;
+      const pixel =
+        y * outWidth + x;
+
       let bestClass = 0;
       let bestScore = -Infinity;
 
       for (let cls = 0; cls < channels; cls++) {
         const score = Number(
-          values[cls * outHeight * outWidth + pixel]
+          values[
+            cls * outHeight * outWidth + pixel
+          ]
         );
+
         if (score > bestScore) {
           bestScore = score;
           bestClass = cls;
@@ -198,8 +170,10 @@ async function getHairSegmentation(
       }
 
       classCounts[bestClass] += 1;
-      hairMask[pixel] =
-        bestClass === HAIR_CLASS_INDEX ? 255 : 0;
+
+      if (bestClass === HAIR_CLASS_INDEX) {
+        hairMask[pixel] = 255;
+      }
     }
   }
 
@@ -208,42 +182,30 @@ async function getHairSegmentation(
       classIndex: index,
       pixels: count,
       percent: Number(
-        ((count / (outWidth * outHeight)) * 100).toFixed(3)
+        (
+          (count / (outWidth * outHeight)) *
+          100
+        ).toFixed(3)
       ),
     }))
     .sort((a, b) => b.pixels - a.pixels);
 
-  const hairPixels = classCounts[HAIR_CLASS_INDEX] || 0;
+  const hairPixels =
+    classCounts[HAIR_CLASS_INDEX] || 0;
 
-  const localMask = await sharp(hairMask, {
+  const fullMask = await sharp(hairMask, {
     raw: {
       width: outWidth,
       height: outHeight,
       channels: 1,
     },
   })
-    .resize(cropSize, cropSize, {
+    .resize(width, height, {
       fit: "fill",
       kernel: "nearest",
     })
-    .dilate(2)
     .raw()
     .toBuffer();
-
-  const fullMask = Buffer.alloc(width * height, 0);
-
-  for (let y = 0; y < cropSize; y++) {
-    const targetY = cropTop + y;
-    if (targetY < 0 || targetY >= height) continue;
-
-    for (let x = 0; x < cropSize; x++) {
-      const targetX = cropLeft + x;
-      if (targetX < 0 || targetX >= width) continue;
-
-      fullMask[targetY * width + targetX] =
-        localMask[y * cropSize + x];
-    }
-  }
 
   return {
     data: fullMask,
@@ -257,7 +219,8 @@ async function getHairSegmentation(
       parserOutWidth: outWidth,
       parserOutHeight: outHeight,
       parserHairPixels: hairPixels,
-      parserTopClasses: classDistribution.slice(0, 8),
+      parserTopClasses:
+        classDistribution.slice(0, 8),
     },
   };
 }
