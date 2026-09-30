@@ -258,7 +258,6 @@ async function getHairSegmentation(
       parserOutHeight: outHeight,
       parserHairPixels: hairPixels,
       parserTopClasses: classDistribution.slice(0, 8),
-      hairPixelsAfterDilation: hairPixelsAfterDilation,
     },
   };
 }
