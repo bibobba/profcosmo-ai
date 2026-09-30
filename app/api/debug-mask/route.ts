@@ -72,6 +72,287 @@ async function getHairParserSession() {
   return hairParserSessionPromise;
 }
 
+
+const FACE_DETECTOR_MODEL_URL =
+  "https://github.com/yakhyo/uniface/releases/download/weights/scrfd_10g_kps.onnx";
+const FACE_DETECTOR_MODEL_PATH =
+  "/tmp/profcosmo-scrfd-10g-kps.onnx";
+
+let faceDetectorSessionPromise: Promise<ort.InferenceSession> | null = null;
+let faceDetectorModelPromise: Promise<Buffer> | null = null;
+
+async function loadFaceDetectorModel() {
+  if (!faceDetectorModelPromise) {
+    faceDetectorModelPromise = (async () => {
+      try {
+        const fs = await import("node:fs/promises");
+        const existing = await fs.stat(FACE_DETECTOR_MODEL_PATH);
+        if (existing.size > 10_000_000) {
+          return fs.readFile(FACE_DETECTOR_MODEL_PATH);
+        }
+      } catch {
+        // First invocation.
+      }
+
+      const response = await fetch(FACE_DETECTOR_MODEL_URL);
+      if (!response.ok) {
+        throw new Error(
+          \`Не удалось загрузить SCRFD: HTTP \${response.status}\`
+        );
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length < 10_000_000) {
+        throw new Error("Файл SCRFD повреждён или слишком мал.");
+      }
+
+      const fs = await import("node:fs/promises");
+      await fs.writeFile(FACE_DETECTOR_MODEL_PATH, buffer);
+      return buffer;
+    })();
+  }
+
+  return faceDetectorModelPromise;
+}
+
+async function getFaceDetectorSession() {
+  if (!faceDetectorSessionPromise) {
+    faceDetectorSessionPromise = (async () => {
+      const model = await loadFaceDetectorModel();
+      return ort.InferenceSession.create(model, {
+        executionProviders: ["cpu"],
+        graphOptimizationLevel: "all",
+      });
+    })();
+  }
+
+  return faceDetectorSessionPromise;
+}
+
+function distance2bbox(
+  points: Float32Array | number[],
+  distances: Float32Array | number[]
+) {
+  const count = Math.floor(points.length / 2);
+  const boxes = new Float32Array(count * 4);
+
+  for (let i = 0; i < count; i++) {
+    const px = Number(points[i * 2]);
+    const py = Number(points[i * 2 + 1]);
+    const l = Number(distances[i * 4]);
+    const t = Number(distances[i * 4 + 1]);
+    const r = Number(distances[i * 4 + 2]);
+    const b = Number(distances[i * 4 + 3]);
+
+    boxes[i * 4] = px - l;
+    boxes[i * 4 + 1] = py - t;
+    boxes[i * 4 + 2] = px + r;
+    boxes[i * 4 + 3] = py + b;
+  }
+
+  return boxes;
+}
+
+function nmsBoxes(
+  detections: Array<[number, number, number, number, number]>,
+  threshold: number
+) {
+  const order = detections
+    .map((_, index) => index)
+    .sort((a, b) => detections[b][4] - detections[a][4]);
+
+  const keep: number[] = [];
+
+  while (order.length) {
+    const current = order.shift()!;
+    keep.push(current);
+
+    const [x1, y1, x2, y2] = detections[current];
+    const areaA =
+      Math.max(0, x2 - x1 + 1) *
+      Math.max(0, y2 - y1 + 1);
+
+    const remaining: number[] = [];
+
+    for (const index of order) {
+      const [xx1, yy1, xx2, yy2] = detections[index];
+      const areaB =
+        Math.max(0, xx2 - xx1 + 1) *
+        Math.max(0, yy2 - yy1 + 1);
+
+      const ix1 = Math.max(x1, xx1);
+      const iy1 = Math.max(y1, yy1);
+      const ix2 = Math.min(x2, xx2);
+      const iy2 = Math.min(y2, yy2);
+
+      const intersection =
+        Math.max(0, ix2 - ix1 + 1) *
+        Math.max(0, iy2 - iy1 + 1);
+
+      const union = areaA + areaB - intersection;
+      const iou = union > 0 ? intersection / union : 0;
+
+      if (iou <= threshold) {
+        remaining.push(index);
+      }
+    }
+
+    order.splice(0, order.length, ...remaining);
+  }
+
+  return keep;
+}
+
+async function detectLargestFace(
+  sourceBuffer: Buffer,
+  width: number,
+  height: number
+) {
+  const detectorInputSize = 640;
+
+  const { data: rgb } = await sharp(sourceBuffer)
+    .rotate()
+    .resize(detectorInputSize, detectorInputSize, {
+      fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 1 },
+    })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  // SCRFD expects BGR and (pixel - 127.5) / 127.5.
+  const input = new Float32Array(
+    1 * 3 * detectorInputSize * detectorInputSize
+  );
+
+  const plane = detectorInputSize * detectorInputSize;
+
+  for (let i = 0; i < plane; i++) {
+    const r = rgb[i * 3];
+    const g = rgb[i * 3 + 1];
+    const b = rgb[i * 3 + 2];
+
+    input[i] = (b - 127.5) / 127.5;
+    input[plane + i] = (g - 127.5) / 127.5;
+    input[plane * 2 + i] =
+      (r - 127.5) / 127.5;
+  }
+
+  const session = await getFaceDetectorSession();
+  const inputName = session.inputNames[0];
+  const outputs = await session.run({
+    [inputName]: new ort.Tensor(
+      "float32",
+      input,
+      [1, 3, detectorInputSize, detectorInputSize]
+    ),
+  });
+
+  const outputNames = session.outputNames;
+  const outputValues = outputNames.map(
+    (name) => outputs[name]
+  );
+
+  const scoresByLevel = outputValues.slice(0, 3);
+  const boxesByLevel = outputValues.slice(3, 6);
+
+  const strides = [8, 16, 32];
+  const numAnchors = 2;
+  const threshold = 0.5;
+  const detections: Array<
+    [number, number, number, number, number]
+  > = [];
+
+  for (let level = 0; level < 3; level++) {
+    const stride = strides[level];
+    const scoresTensor = scoresByLevel[level];
+    const boxesTensor = boxesByLevel[level];
+
+    if (!scoresTensor?.data || !boxesTensor?.data) {
+      continue;
+    }
+
+    const scores = scoresTensor.data as
+      | Float32Array
+      | number[];
+    const boxValues = boxesTensor.data as
+      | Float32Array
+      | number[];
+
+    const featureHeight = detectorInputSize / stride;
+    const featureWidth = detectorInputSize / stride;
+    const positions = featureHeight * featureWidth;
+
+    for (let p = 0; p < positions; p++) {
+      const x = (p % featureWidth) * stride;
+      const y =
+        Math.floor(p / featureWidth) * stride;
+
+      for (let anchor = 0; anchor < numAnchors; anchor++) {
+        const index = p * numAnchors + anchor;
+        const score = Number(scores[index]);
+
+        if (score < threshold) continue;
+
+        const boxOffset = index * 4;
+        const box = distance2bbox(
+          [x, y],
+          [
+            Number(boxValues[boxOffset]),
+            Number(boxValues[boxOffset + 1]),
+            Number(boxValues[boxOffset + 2]),
+            Number(boxValues[boxOffset + 3]),
+          ]
+        );
+
+        const scaleX =
+          width / detectorInputSize;
+        const scaleY =
+          height / detectorInputSize;
+
+        detections.push([
+          Math.max(0, box[0] * scaleX),
+          Math.max(0, box[1] * scaleY),
+          Math.min(width, box[2] * scaleX),
+          Math.min(height, box[3] * scaleY),
+          score,
+        ]);
+      }
+    }
+  }
+
+  if (!detections.length) {
+    throw new Error(
+      "SCRFD не нашёл лицо на фотографии."
+    );
+  }
+
+  const keep = nmsBoxes(detections, 0.4);
+
+  let best = detections[keep[0]];
+  for (const index of keep) {
+    const candidate = detections[index];
+    const bestArea =
+      Math.max(0, best[2] - best[0]) *
+      Math.max(0, best[3] - best[1]);
+    const candidateArea =
+      Math.max(0, candidate[2] - candidate[0]) *
+      Math.max(0, candidate[3] - candidate[1]);
+
+    if (candidateArea > bestArea) {
+      best = candidate;
+    }
+  }
+
+  return {
+    x1: best[0],
+    y1: best[1],
+    x2: best[2],
+    y2: best[3],
+    confidence: best[4],
+  };
+}
+
 async function getHairSegmentation(
   sourceFile: File,
   width: number,
@@ -81,12 +362,52 @@ async function getHairSegmentation(
     await sourceFile.arrayBuffer()
   );
 
-  // Match the official yakhyo/face-parsing inference pipeline:
-  // resize the complete RGB image to 512x512, normalize with ImageNet
-  // statistics, run BiSeNet, argmax the 19 classes, then resize the
-  // semantic mask back to the original image dimensions.
+  const face = await detectLargestFace(
+    sourceBuffer,
+    width,
+    height
+  );
+
+  const faceWidth = face.x2 - face.x1;
+  const faceHeight = face.y2 - face.y1;
+
+  // Expand the detected face box into a head/hairstyle crop.
+  // The expansion is relative to the detected face, so different photo
+  // resolutions and framing are handled automatically.
+  const cropLeft = Math.max(
+    0,
+    Math.round(face.x1 - faceWidth * 0.55)
+  );
+  const cropRight = Math.min(
+    width,
+    Math.round(face.x2 + faceWidth * 0.55)
+  );
+  const cropTop = Math.max(
+    0,
+    Math.round(face.y1 - faceHeight * 0.95)
+  );
+  const cropBottom = Math.min(
+    height,
+    Math.round(face.y2 + faceHeight * 0.35)
+  );
+
+  const cropWidth = Math.max(
+    1,
+    cropRight - cropLeft
+  );
+  const cropHeight = Math.max(
+    1,
+    cropBottom - cropTop
+  );
+
   const { data: rgb } = await sharp(sourceBuffer)
     .rotate()
+    .extract({
+      left: cropLeft,
+      top: cropTop,
+      width: cropWidth,
+      height: cropHeight,
+    })
     .resize(512, 512, {
       fit: "fill",
     })
@@ -94,6 +415,7 @@ async function getHairSegmentation(
     .raw()
     .toBuffer({ resolveWithObject: true });
 
+  // BiSeNet expects RGB input normalized with ImageNet statistics.
   const mean = [0.485, 0.456, 0.406];
   const std = [0.229, 0.224, 0.225];
   const input = new Float32Array(1 * 3 * 512 * 512);
@@ -193,19 +515,48 @@ async function getHairSegmentation(
   const hairPixels =
     classCounts[HAIR_CLASS_INDEX] || 0;
 
-  const fullMask = await sharp(hairMask, {
+  const cropMask = await sharp(hairMask, {
     raw: {
       width: outWidth,
       height: outHeight,
       channels: 1,
     },
   })
-    .resize(width, height, {
+    .resize(cropWidth, cropHeight, {
       fit: "fill",
       kernel: "nearest",
     })
     .raw()
     .toBuffer();
+
+  const fullMask = Buffer.alloc(
+    width * height,
+    0
+  );
+
+  for (let y = 0; y < cropHeight; y++) {
+    const sourceY = cropTop + y;
+    if (
+      sourceY < 0 ||
+      sourceY >= height
+    ) continue;
+
+    const sourceRow =
+      sourceY * width;
+    const cropRow =
+      y * cropWidth;
+
+    for (let x = 0; x < cropWidth; x++) {
+      const sourceX = cropLeft + x;
+      if (
+        sourceX < 0 ||
+        sourceX >= width
+      ) continue;
+
+      fullMask[sourceRow + sourceX] =
+        cropMask[cropRow + x];
+    }
+  }
 
   return {
     data: fullMask,
