@@ -187,10 +187,35 @@ async function getMobileHairNetSession() {
   return mobileHairNetSessionPromise;
 }
 
-async function getMobileHairNetMask(sourceBuffer: Buffer, width: number, height: number) {
+async function getMobileHairNetMask(
+  sourceBuffer: Buffer,
+  width: number,
+  height: number,
+  face: { x1: number; y1: number; x2: number; y2: number }
+) {
   const inputSize = 224;
+
+  // MobileHairNet is a hair/head model. Do not feed it the whole portrait.
+  // Crop around the detected face so hair occupies a large fraction of the input.
+  const faceWidth = face.x2 - face.x1;
+  const faceHeight = face.y2 - face.y1;
+
+  const cropLeft = Math.max(0, Math.round(face.x1 - faceWidth * 0.60));
+  const cropTop = Math.max(0, Math.round(face.y1 - faceHeight * 0.50));
+  const cropRight = Math.min(width, Math.round(face.x2 + faceWidth * 0.60));
+  const cropBottom = Math.min(height, Math.round(face.y2 + faceHeight * 0.20));
+
+  const cropWidth = cropRight - cropLeft;
+  const cropHeight = cropBottom - cropTop;
+
   const { data: rgb } = await sharp(sourceBuffer)
     .rotate()
+    .extract({
+      left: cropLeft,
+      top: cropTop,
+      width: cropWidth,
+      height: cropHeight,
+    })
     .resize(inputSize, inputSize, { fit: "fill" })
     .removeAlpha()
     .raw()
@@ -229,10 +254,35 @@ async function getMobileHairNetMask(sourceBuffer: Buffer, width: number, height:
       small[pixel] = bestClass > 0 ? 255 : 0;
     }
   }
-  const mask = await sharp(small, {
+  const cropMask = await sharp(small, {
     raw: { width: outWidth, height: outHeight, channels: 1 },
-  }).resize(width, height, { fit: "fill", kernel: "nearest" }).raw().toBuffer();
-  return { mask, outputDims: dims };
+  })
+    .resize(cropWidth, cropHeight, { fit: "fill", kernel: "nearest" })
+    .raw()
+    .toBuffer();
+
+  const fullMask = Buffer.alloc(width * height, 0);
+  for (let y = 0; y < cropHeight; y++) {
+    cropMask.copy(
+      fullMask,
+      (cropTop + y) * width + cropLeft,
+      y * cropWidth,
+      (y + 1) * cropWidth
+    );
+  }
+
+  return {
+    mask: fullMask,
+    outputDims: dims,
+    crop: {
+      left: cropLeft,
+      top: cropTop,
+      right: cropRight,
+      bottom: cropBottom,
+      width: cropWidth,
+      height: cropHeight,
+    },
+  };
 }
 
 async function getModnetMatte(
@@ -1510,11 +1560,25 @@ export async function POST(request: Request) {
     let mobileHairNetMask: Buffer | null = null;
     let mobileHairNetError: string | null = null;
     let mobileHairNetDims: number[] | null = null;
+    let mobileHairNetCrop: {
+      left: number;
+      top: number;
+      right: number;
+      bottom: number;
+      width: number;
+      height: number;
+    } | null = null;
 
     try {
-      const result = await getMobileHairNetMask(sourceBuffer, metadata.width, metadata.height);
+      const result = await getMobileHairNetMask(
+        sourceBuffer,
+        metadata.width,
+        metadata.height,
+        face
+      );
       mobileHairNetMask = result.mask;
       mobileHairNetDims = result.outputDims;
+      mobileHairNetCrop = result.crop;
     } catch (error) {
       mobileHairNetError = error instanceof Error ? error.message : String(error);
       console.error("[PROFCOSMO] MobileHairNet diagnostic failed:", error);
@@ -1838,6 +1902,7 @@ export async function POST(request: Request) {
           available: Boolean(mobileHairNetMask),
           error: mobileHairNetError,
           outputDims: mobileHairNetDims,
+          crop: mobileHairNetCrop,
           editablePixels: mobileHairNetMask
             ? mobileHairNetMask.reduce((count, value) => count + (value >= 128 ? 1 : 0), 0)
             : 0,
