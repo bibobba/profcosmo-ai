@@ -1324,6 +1324,7 @@ async function streamOneVariant(params: {
     source.height,
     gender,
     length,
+    structure,
     source.file
   );
 
@@ -1776,6 +1777,7 @@ async function createHairMask(
   height: number,
   gender: string,
   length: string,
+  structure: string,
   sourceFile: File
 ) {
   let segmentation: { data: Buffer } | null = null;
@@ -1803,12 +1805,7 @@ async function createHairMask(
   const faceCx = 0.50;
   const faceCy = portrait ? 0.43 : 0.46;
   const faceRx = portrait ? 0.20 : 0.23;
-  const faceRy = portrait ? 0.23 : 0.25;
-
-  const headCx = 0.50;
-  const headCy = portrait ? 0.29 : 0.30;
-  const headRx = portrait ? 0.39 : 0.43;
-  const headRy = portrait ? 0.31 : 0.34;
+  const faceRy = portrait ? 0.25 : 0.27;
 
   const alpha = Buffer.alloc(
     width * height,
@@ -1829,25 +1826,86 @@ async function createHairMask(
   };
 
   if (segmentation) {
-    const { data } = segmentation;
+    /*
+     * IMPORTANT:
+     * Do not replace the semantic hair mask with a large head ellipse.
+     * The previous ellipse made a huge amount of scalp/background editable,
+     * which allowed GPT Image to redraw the head contour.
+     *
+     * The edit zone is now the detected hair mask plus a controlled local
+     * expansion. This gives the model room to build the requested hairstyle
+     * while keeping the original head contour outside the edit zone.
+     */
+    const expansionRatio =
+      structure === "afro-curls"
+        ? 0.045
+        : longHair
+          ? 0.035
+          : 0.025;
 
-    for (let i = 0; i < data.length; i++) {
-      alpha[i] = data[i] >= 128 ? 0 : 255;
+    const expansionPixels = Math.max(
+      8,
+      Math.round(
+        Math.min(width, height) *
+          expansionRatio
+      )
+    );
+
+    const expanded = await sharp(
+      segmentation.data,
+      {
+        raw: {
+          width,
+          height,
+          channels: 1,
+        },
+      }
+    )
+      .dilate(expansionPixels)
+      .raw()
+      .toBuffer();
+
+    for (let i = 0; i < expanded.length; i++) {
+      alpha[i] =
+        expanded[i] >= 128
+          ? 0
+          : 255;
+    }
+  } else {
+    /*
+     * Conservative fallback only if the local hair parser cannot initialize.
+     * This fallback is deliberately smaller than the previous head ellipse.
+     * The normal path uses semantic hair segmentation.
+     */
+    const fallbackCx = 0.50;
+    const fallbackCy = portrait ? 0.30 : 0.31;
+    const fallbackRx = portrait ? 0.29 : 0.32;
+    const fallbackRy = portrait ? 0.24 : 0.26;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (
+          insideEllipse(
+            x,
+            y,
+            fallbackCx,
+            fallbackCy,
+            fallbackRx,
+            fallbackRy
+          )
+        ) {
+          alpha[y * width + x] = 0;
+        }
+      }
     }
   }
 
-  // Allow controlled expansion around the scalp for a new haircut silhouette,
-  // while immediately protecting the face and ears.
+  /*
+   * The face, ears and lower facial area are never part of the editable zone.
+   * This is a deterministic safety boundary on top of the semantic mask.
+   */
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const inHead = insideEllipse(
-        x,
-        y,
-        headCx,
-        headCy,
-        headRx,
-        headRy
-      );
       const inFace = insideEllipse(
         x,
         y,
@@ -1857,10 +1915,6 @@ async function createHairMask(
         faceRy
       );
 
-      if (inHead && !inFace) {
-        alpha[y * width + x] = 0;
-      }
-
       const leftEar = insideEllipse(
         x,
         y,
@@ -1869,6 +1923,7 @@ async function createHairMask(
         0.055,
         0.09
       );
+
       const rightEar = insideEllipse(
         x,
         y,
@@ -1878,17 +1933,14 @@ async function createHairMask(
         0.09
       );
 
-      if (leftEar || rightEar) {
+      if (inFace || leftEar || rightEar) {
         alpha[y * width + x] = 255;
       }
     }
   }
 
-  // Never expose a large lower rectangle: it can make clothing/background
-  // editable. Existing long hair is covered by semantic segmentation.
   void gender;
-  void longHair;
-
+  void length;
   const rgba = Buffer.alloc(
     width * height * 4
   );
