@@ -258,6 +258,7 @@ async function getHairSegmentation(
       parserOutHeight: outHeight,
       parserHairPixels: hairPixels,
       parserTopClasses: classDistribution.slice(0, 8),
+      hairPixelsAfterDilation: hairPixelsAfterDilation,
     },
   };
 }
@@ -357,6 +358,11 @@ async function createHairMask(
       .dilate(expansionPixels)
       .raw()
       .toBuffer();
+
+    let hairPixelsAfterDilation = 0;
+    for (const value of expanded) {
+      if (value >= 128) hairPixelsAfterDilation++;
+    }
 
     for (let i = 0; i < expanded.length; i++) {
       alpha[i] =
