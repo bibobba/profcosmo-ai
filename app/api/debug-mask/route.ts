@@ -234,12 +234,12 @@ async function detectLargestFace(
 
     input[i] = (b - 127.5) / 127.5;
     input[plane + i] = (g - 127.5) / 127.5;
-    input[plane * 2 + i] =
-      (r - 127.5) / 127.5;
+    input[plane * 2 + i] = (r - 127.5) / 127.5;
   }
 
   const session = await getFaceDetectorSession();
   const inputName = session.inputNames[0];
+
   const outputs = await session.run({
     [inputName]: new ort.Tensor(
       "float32",
@@ -248,10 +248,18 @@ async function detectLargestFace(
     ),
   });
 
+  /*
+   * SCRFD output order in UniFace:
+   *   0..2 = scores for strides 8, 16, 32
+   *   3..5 = bbox distances for strides 8, 16, 32
+   *   6..8 = landmarks
+   *
+   * IMPORTANT:
+   * bbox predictions are distances in feature-map units and MUST be
+   * multiplied by the corresponding stride before distance2bbox().
+   */
   const outputNames = session.outputNames;
-  const outputValues = outputNames.map(
-    (name) => outputs[name]
-  );
+  const outputValues = outputNames.map((name) => outputs[name]);
 
   const scoresByLevel = outputValues.slice(0, 3);
   const boxesByLevel = outputValues.slice(3, 6);
@@ -259,9 +267,23 @@ async function detectLargestFace(
   const strides = [8, 16, 32];
   const numAnchors = 2;
   const threshold = 0.5;
+
   const detections: Array<
     [number, number, number, number, number]
   > = [];
+
+  /*
+   * sharp(..., fit: "contain") uses the same top-left padding strategy
+   * as UniFace's resize_image(). For a 1440x1920 portrait:
+   *   1920 -> 640
+   *   1440 -> 480
+   *
+   * Therefore one detector pixel corresponds to resizeFactor pixels in
+   * the original image. We convert detector coordinates back using the
+   * actual aspect-ratio-preserving resize factor, not width/640 and
+   * height/640 independently.
+   */
+  const resizeFactor = detectorInputSize / height;
 
   for (let level = 0; level < 3; level++) {
     const stride = strides[level];
@@ -275,6 +297,7 @@ async function detectLargestFace(
     const scores = scoresTensor.data as
       | Float32Array
       | number[];
+
     const boxValues = boxesTensor.data as
       | Float32Array
       | number[];
@@ -285,8 +308,7 @@ async function detectLargestFace(
 
     for (let p = 0; p < positions; p++) {
       const x = (p % featureWidth) * stride;
-      const y =
-        Math.floor(p / featureWidth) * stride;
+      const y = Math.floor(p / featureWidth) * stride;
 
       for (let anchor = 0; anchor < numAnchors; anchor++) {
         const index = p * numAnchors + anchor;
@@ -295,26 +317,25 @@ async function detectLargestFace(
         if (score < threshold) continue;
 
         const boxOffset = index * 4;
+
+        // SCRFD bbox predictions are stride-relative.
+        const distances = [
+          Number(boxValues[boxOffset]) * stride,
+          Number(boxValues[boxOffset + 1]) * stride,
+          Number(boxValues[boxOffset + 2]) * stride,
+          Number(boxValues[boxOffset + 3]) * stride,
+        ];
+
         const box = distance2bbox(
           [x, y],
-          [
-            Number(boxValues[boxOffset]),
-            Number(boxValues[boxOffset + 1]),
-            Number(boxValues[boxOffset + 2]),
-            Number(boxValues[boxOffset + 3]),
-          ]
+          distances
         );
 
-        const scaleX =
-          width / detectorInputSize;
-        const scaleY =
-          height / detectorInputSize;
-
         detections.push([
-          Math.max(0, box[0] * scaleX),
-          Math.max(0, box[1] * scaleY),
-          Math.min(width, box[2] * scaleX),
-          Math.min(height, box[3] * scaleY),
+          Math.max(0, box[0] / resizeFactor),
+          Math.max(0, box[1] / resizeFactor),
+          Math.min(width, box[2] / resizeFactor),
+          Math.min(height, box[3] / resizeFactor),
           score,
         ]);
       }
@@ -330,11 +351,14 @@ async function detectLargestFace(
   const keep = nmsBoxes(detections, 0.4);
 
   let best = detections[keep[0]];
+
   for (const index of keep) {
     const candidate = detections[index];
+
     const bestArea =
       Math.max(0, best[2] - best[0]) *
       Math.max(0, best[3] - best[1]);
+
     const candidateArea =
       Math.max(0, candidate[2] - candidate[0]) *
       Math.max(0, candidate[3] - candidate[1]);
