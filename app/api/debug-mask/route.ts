@@ -495,10 +495,11 @@ async function getHairSegmentation(
 
   const values = output.data as Float32Array | number[];
   const classCounts = new Array<number>(channels).fill(0);
-  const hairMask = Buffer.alloc(
-    outWidth * outHeight,
-    0
-  );
+  const hairMask = Buffer.alloc(outWidth * outHeight, 0);
+  const diagnosticClassMasks = new Map<number, Buffer>();
+  for (const cls of [14, 16, 17]) {
+    diagnosticClassMasks.set(cls, Buffer.alloc(outWidth * outHeight, 0));
+  }
 
   for (let y = 0; y < outHeight; y++) {
     for (let x = 0; x < outWidth; x++) {
@@ -525,6 +526,11 @@ async function getHairSegmentation(
 
       if (bestClass === HAIR_CLASS_INDEX) {
         hairMask[pixel] = 255;
+      }
+
+      const diagnosticMask = diagnosticClassMasks.get(bestClass);
+      if (diagnosticMask) {
+        diagnosticMask[pixel] = 255;
       }
     }
   }
@@ -588,8 +594,44 @@ async function getHairSegmentation(
     }
   }
 
+  const fullDiagnosticClassMasks: Record<number, Buffer> = {};
+
+  for (const [cls, classMask] of diagnosticClassMasks.entries()) {
+    const restored = await sharp(classMask, {
+      raw: {
+        width: outWidth,
+        height: outHeight,
+        channels: 1,
+      },
+    })
+      .resize(cropWidth, cropHeight, {
+        fit: "fill",
+        kernel: "nearest",
+      })
+      .raw()
+      .toBuffer();
+
+    const full = Buffer.alloc(width * height, 0);
+
+    for (let y = 0; y < cropHeight; y++) {
+      const sourceY = cropTop + y;
+      if (sourceY < 0 || sourceY >= height) continue;
+
+      for (let x = 0; x < cropWidth; x++) {
+        const sourceX = cropLeft + x;
+        if (sourceX < 0 || sourceX >= width) continue;
+
+        full[sourceY * width + sourceX] =
+          restored[y * cropWidth + x];
+      }
+    }
+
+    fullDiagnosticClassMasks[cls] = full;
+  }
+
   return {
     data: fullMask,
+    diagnosticClassMasks: fullDiagnosticClassMasks,
     info: {
       width,
       height,
@@ -839,7 +881,46 @@ export async function POST(request: Request) {
     const image = formData.get("image");
 
     if (!(image instanceof File)) {
-      return NextResponse.json(
+      const diagnosticClassPreviews: Record<string, string> = {};
+
+    if (maskResult.diagnosticClassMasks) {
+      for (const cls of [14, 16, 17]) {
+        const classMask = maskResult.diagnosticClassMasks[cls];
+        if (!classMask) continue;
+
+        const rgba = Buffer.alloc(metadata.width * metadata.height * 4);
+        for (let i = 0; i < classMask.length; i++) {
+          const offset = i * 4;
+          rgba[offset] = 255;
+          rgba[offset + 1] = 255;
+          rgba[offset + 2] = 255;
+          rgba[offset + 3] = classMask[i];
+        }
+
+        const overlay = await sharp(sourceBuffer)
+          .composite([
+            {
+              input: await sharp(rgba, {
+                raw: {
+                  width: metadata.width,
+                  height: metadata.height,
+                  channels: 4,
+                },
+              })
+                .png()
+                .toBuffer(),
+              blend: "screen",
+            },
+          ])
+          .jpeg({ quality: 90 })
+          .toBuffer();
+
+        diagnosticClassPreviews[String(cls)] =
+          `data:image/jpeg;base64,${overlay.toString("base64")}`;
+      }
+    }
+
+    return NextResponse.json(
         { error: "Загрузите фотографию." },
         { status: 400 }
       );
