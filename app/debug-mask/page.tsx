@@ -112,6 +112,33 @@ export default function DebugMaskPage() {
               style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
             />
 
+            <h2>Новая безопасная геометрическая зона</h2>
+            <p>
+              Экспериментальная маска на основе facial landmarks SCRFD.
+              Белая область — зона, которую разрешено менять; лицо вне этой
+              зоны остаётся защищённым. Production-генерацию этот тест не меняет.
+            </p>
+            <img
+              src={result.safeMaskPreview}
+              alt="Безопасная геометрическая маска поверх фото"
+              style={{
+                maxWidth: "100%",
+                display: "block",
+                borderRadius: 12,
+              }}
+            />
+
+            <h3>Чистая безопасная маска</h3>
+            <img
+              src={result.safeMask}
+              alt="Чистая безопасная маска"
+              style={{
+                maxWidth: "100%",
+                display: "block",
+                borderRadius: 12,
+              }}
+            />
+
             <h2>Сравнение классов BiSeNet</h2>
             <p>
               Здесь показываем отдельно классы 14, 16 и 17. Белая область —
