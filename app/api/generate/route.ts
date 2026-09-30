@@ -1306,6 +1306,7 @@ async function streamOneVariant(params: {
   paletteReference?: File | null;
   gender: string;
   length: string;
+  structure: string;
   onPartial: (base64Image: string) => void;
 }) {
   const {
@@ -1315,6 +1316,7 @@ async function streamOneVariant(params: {
     paletteReference,
     gender,
     length,
+    structure,
     onPartial,
   } = params;
 
@@ -2551,6 +2553,7 @@ export async function POST(
             paletteReference,
             gender,
             length,
+            structure,
           };
         }
       );
@@ -2603,6 +2606,7 @@ export async function POST(
                         job.paletteReference,
                       gender,
                       length: job.length,
+                      structure: job.structure,
                       onPartial: (partialBase64) => {
                         send({
                           type: "partial",
