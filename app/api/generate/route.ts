@@ -1378,7 +1378,7 @@ async function streamOneVariant(params: {
     {
       method: "POST",
       headers: {
-        Authorization: \`Bearer \${apiKey}\`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: openAIForm,
     }
@@ -1610,6 +1610,75 @@ function createPaletteReference(hex: string, code: string) {
   const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 6;
   const png = Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]), pngChunk("IHDR", ihdr), pngChunk("IDAT", deflateSync(raw, { level: 9 })), pngChunk("IEND", Buffer.alloc(0))]);
   return new File([png], "palette-" + code.replaceAll("/", "_") + ".png", { type: "image/png" });
+}
+
+function roundTo16(value: number) {
+  return Math.max(16, Math.round(value / 16) * 16);
+}
+
+function getOutputSize(width: number, height: number) {
+  const ratio = width / height;
+
+  if (ratio >= 0.9 && ratio <= 1.1) {
+    return "1024x1024";
+  }
+
+  if (ratio < 0.9) {
+    const outWidth = 1024;
+    const outHeight = Math.min(
+      1536,
+      Math.max(
+        1024,
+        roundTo16(outWidth / ratio)
+      )
+    );
+    return `${outWidth}x${outHeight}`;
+  }
+
+  const outHeight = 1024;
+  const outWidth = Math.min(
+    1536,
+    Math.max(
+      1024,
+      roundTo16(outHeight * ratio)
+    )
+  );
+  return `${outWidth}x${outHeight}`;
+}
+
+async function prepareSourceImage(image: File) {
+  const inputBuffer = Buffer.from(
+    await image.arrayBuffer()
+  );
+
+  const pipeline = sharp(inputBuffer)
+    .rotate();
+
+  const metadata = await pipeline.metadata();
+
+  if (!metadata.width || !metadata.height) {
+    throw new Error(
+      "Не удалось определить размеры исходной фотографии."
+    );
+  }
+
+  const normalized = await pipeline
+    .png()
+    .toBuffer();
+
+  return {
+    file: new File(
+      [normalized],
+      "source.png",
+      { type: "image/png" }
+    ),
+    width: metadata.width,
+    height: metadata.height,
+    size: getOutputSize(
+      metadata.width,
+      metadata.height
+    ),
+  };
 }
 
 /* =========================================================
