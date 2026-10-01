@@ -1562,15 +1562,32 @@ async function compositeHairOnlyEdit(
     .ensureAlpha()
     .extractChannel("alpha")
     .negate()
+    .raw()
+    .toBuffer();
+
+  /*
+   * Sharp's composite() has no mask property. Attach the editable
+   * alpha channel directly to the generated image, then composite
+   * that RGBA image over the untouched source.
+   */
+  const generatedWithEditableAlpha = await sharp(
+    generatedBuffer
+  )
+    .joinChannel(editableAlpha, {
+      raw: {
+        width,
+        height,
+        channels: 1,
+      },
+    })
     .png()
     .toBuffer();
 
   return sharp(sourceBuffer)
     .composite([
       {
-        input: generatedBuffer,
+        input: generatedWithEditableAlpha,
         blend: "over",
-        mask: editableAlpha,
       },
     ])
     .jpeg({
