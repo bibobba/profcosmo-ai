@@ -1740,7 +1740,7 @@ async function loadFaceDetectorModel() {
 
       if (!response.ok) {
         throw new Error(
-          \`Не удалось загрузить SCRFD: HTTP \${response.status}\`
+          `Не удалось загрузить SCRFD: HTTP ${response.status}`
         );
       }
 
