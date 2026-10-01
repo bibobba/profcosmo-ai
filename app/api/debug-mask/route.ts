@@ -1145,12 +1145,17 @@ function createHybridHairMask(
     0,
     Math.floor(face.y1 - faceHeight * (afro ? 1.35 : 1.05))
   );
+  // Short male hair must never reach the neck or clothing.
+  // For long hair we intentionally allow the editable zone below the face.
+  const jawlineY = face.y2;
   const bottom = Math.min(
     height,
     Math.ceil(
-      face.y2 +
-        faceHeight *
-          (longHair ? 1.7 : afro ? 0.45 : 0.15)
+      longHair
+        ? face.y2 + faceHeight * 1.7
+        : afro
+          ? face.y2 + faceHeight * 0.08
+          : jawlineY
     )
   );
 
@@ -1200,6 +1205,11 @@ function createHybridHairMask(
 
       // Deterministic face protection wins over every learned mask.
       if (faceProtection(x, y)) continue;
+
+      // Hard anatomical cutoff: for short/medium hair, nothing below
+      // the detected face box can become editable. This prevents MODNet
+      // person matte from leaking into neck, shirt and shoulders.
+      if (!longHair && y >= jawlineY) continue;
 
       result[i] = matte[i];
     }
