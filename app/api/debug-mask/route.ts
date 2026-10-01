@@ -1192,11 +1192,11 @@ function createHybridHairMask(
       if (matte[i] < 110) continue;
 
       // Existing face parsing is used only as a veto mask.
-      if (skinMask?.[i] >= 128) continue;
-      if (leftEarMask?.[i] >= 128) continue;
-      if (rightEarMask?.[i] >= 128) continue;
-      if (neckMask?.[i] >= 128) continue;
-      if (clothMask?.[i] >= 128) continue;
+      if ((skinMask?.[i] ?? 0) >= 128) continue;
+      if ((leftEarMask?.[i] ?? 0) >= 128) continue;
+      if ((rightEarMask?.[i] ?? 0) >= 128) continue;
+      if ((neckMask?.[i] ?? 0) >= 128) continue;
+      if ((clothMask?.[i] ?? 0) >= 128) continue;
 
       // Deterministic face protection wins over every learned mask.
       if (faceProtection(x, y)) continue;
