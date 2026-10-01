@@ -20,9 +20,11 @@ export default function DebugMaskPage() {
 
     const formData = new FormData();
     formData.append("image", file);
+
+    // Контрольный тест: обычная короткая мужская стрижка.
     formData.append("gender", "male");
     formData.append("length", "short");
-    formData.append("structure", "afro-curls");
+    formData.append("structure", "straight");
 
     try {
       const response = await fetch("/api/debug-mask", {
@@ -38,7 +40,11 @@ export default function DebugMaskPage() {
 
       setResult(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка диагностики.");
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Ошибка диагностики."
+      );
     } finally {
       setLoading(false);
     }
@@ -55,8 +61,11 @@ export default function DebugMaskPage() {
       }}
     >
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <h1>PROFCOSMO AI — проверка маски</h1>
-        <p>Тестовый экран. Основную генерацию не меняет.</p>
+        <h1>PROFCOSMO AI — контрольная маска</h1>
+        <p>
+          Показывается только та геометрическая маска, которая сейчас
+          используется production-генерацией.
+        </p>
 
         <input
           type="file"
@@ -82,125 +91,68 @@ export default function DebugMaskPage() {
             cursor: loading ? "wait" : "pointer",
           }}
         >
-          {loading ? "Проверяю…" : "Проверить маску"}
+          {loading ? "Проверяю…" : "Проверить текущую маску"}
         </button>
 
         {error && (
-          <pre style={{ marginTop: 20, color: "#b00020", whiteSpace: "pre-wrap" }}>
+          <pre
+            style={{
+              marginTop: 20,
+              color: "#b00020",
+              whiteSpace: "pre-wrap",
+            }}
+          >
             {error}
           </pre>
         )}
 
         {result && (
           <div style={{ marginTop: 24 }}>
-            <h2>Диагностика</h2>
+            <h2>Текущая production-маска</h2>
+            <p>
+              Белая область — зона, которую разрешено изменять.
+              Всё остальное после генерации жёстко возвращается из
+              оригинальной фотографии.
+            </p>
+
+            {result.safeMaskPreview && (
+              <>
+                <h3>Маска поверх оригинала</h3>
+                <img
+                  src={result.safeMaskPreview}
+                  alt="Текущая production-маска поверх оригинала"
+                  style={{
+                    maxWidth: "100%",
+                    display: "block",
+                    borderRadius: 12,
+                  }}
+                />
+              </>
+            )}
+
+            {result.safeMask && (
+              <>
+                <h3>Чистая маска</h3>
+                <img
+                  src={result.safeMask}
+                  alt="Текущая production-маска"
+                  style={{
+                    maxWidth: "100%",
+                    display: "block",
+                    borderRadius: 12,
+                  }}
+                />
+              </>
+            )}
+
+            <h3>Параметры теста</h3>
             <pre style={{ whiteSpace: "pre-wrap" }}>
-              {JSON.stringify(result.diagnostic, null, 2)}
+              {JSON.stringify(
+                result.diagnostic,
+                null,
+                2
+              )}
             </pre>
-
-            <h2>Маска поверх фото</h2>
-            <img
-              src={result.preview}
-              alt="Диагностическая маска"
-              style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
-            />
-
-            <h2>Чистая маска волос (класс 17)</h2>
-            <img
-              src={result.mask}
-              alt="Чистая маска волос"
-              style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
-            />
-
-            <h2>Текущий тест: гибридная маска волос</h2>
-            <p>
-              MODNet определяет силуэт человека, SCRFD задаёт область головы,
-              а face parsing удаляет лицо, уши, шею и одежду. Production пока не использует эту маску.
-            </p>
-            {result.hybridHairPreview ? (
-              <>
-                <h3>Гибридная маска поверх оригинала</h3>
-                <img
-                  src={result.hybridHairPreview}
-                  alt="Hybrid hair mask"
-                  style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
-                />
-                <h3>Чистая маска волос</h3>
-                <img
-                  src={result.hybridHairCleanMask}
-                  alt="Hybrid clean hair mask"
-                  style={{ maxWidth: "100%", display: "block", borderRadius: 12 }}
-                />
-              </>
-            ) : (
-              <pre style={{ whiteSpace: "pre-wrap", color: "#b00020" }}>
-                Гибридная маска не создана.
-              </pre>
-            )}
-
-            <h2>Диагностика</h2>
-            <p>
-              Здесь проверяем только качество новой маски. Production-генерация
-              и текущая BiSeNet-маска не меняются.
-            </p>
-
-            {result.modnetMattePreview ? (
-              <>
-                <h3>MODNet — исходная matte</h3>
-                <img
-                  src={result.modnetMattePreview}
-                  alt="MODNet matte"
-                  style={{
-                    maxWidth: "100%",
-                    display: "block",
-                    borderRadius: 12,
-                  }}
-                />
-              </>
-            ) : (
-              <pre style={{ whiteSpace: "pre-wrap", color: "#b00020" }}>
-                MODNet не запустился: {result.diagnostic?.modnet?.error || "неизвестная ошибка"}
-              </pre>
-            )}
-
-            {result.modnetHairCandidatePreview && (
-              <>
-                <h3>MODNet + защита лица — кандидат зоны волос</h3>
-                <img
-                  src={result.modnetHairCandidatePreview}
-                  alt="MODNet hair candidate"
-                  style={{
-                    maxWidth: "100%",
-                    display: "block",
-                    borderRadius: 12,
-                  }}
-                />
-              </>
-            )}
-
-            <h2>Сравнение классов BiSeNet</h2>
-            <p>
-              Здесь показываем отдельно классы 14, 16 и 17. Белая область —
-              то, что BiSeNet отнёс к соответствующему классу.
-            </p>
-            {[14, 16, 17].map((cls) => (
-              <div key={cls} style={{ marginTop: 24 }}>
-                <h3>Класс {cls}</h3>
-                {result.diagnosticClassPreviews?.[String(cls)] ? (
-                  <img
-                    src={result.diagnosticClassPreviews[String(cls)]}
-                    alt={`Диагностика класса ${cls}`}
-                    style={{
-                      maxWidth: "100%",
-                      display: "block",
-                      borderRadius: 12,
-                    }}
-                  />
-                ) : (
-                  <p>Предпросмотр не получен.</p>
-                )}
-              </div>
-            ))}
           </div>
         )}
       </div>

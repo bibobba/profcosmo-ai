@@ -1634,32 +1634,37 @@ function roundTo16(value: number) {
 }
 
 function getOutputSize(width: number, height: number) {
-  const ratio = width / height;
+  /*
+   * GPT Image 2 supports custom resolutions. Keep the generated canvas
+   * as close as possible to the source aspect ratio so the final hard
+   * composite does not stretch the edited head or face.
+   *
+   * Dimensions must be multiples of 16 and total pixels must stay within
+   * the Image API limits.
+   */
+  let outWidth = roundTo16(width);
+  let outHeight = roundTo16(height);
 
-  if (ratio >= 0.9 && ratio <= 1.1) {
-    return "1024x1024";
-  }
+  const maxPixels = 8_294_400;
+  const pixels = outWidth * outHeight;
 
-  if (ratio < 0.9) {
-    const outWidth = 1024;
-    const outHeight = Math.min(
-      1536,
-      Math.max(
-        1024,
-        roundTo16(outWidth / ratio)
-      )
+  if (pixels > maxPixels) {
+    const scale = Math.sqrt(
+      maxPixels / pixels
     );
-    return `${outWidth}x${outHeight}`;
+
+    outWidth = roundTo16(
+      outWidth * scale
+    );
+
+    outHeight = roundTo16(
+      outHeight * scale
+    );
   }
 
-  const outHeight = 1024;
-  const outWidth = Math.min(
-    1536,
-    Math.max(
-      1024,
-      roundTo16(outHeight * ratio)
-    )
-  );
+  outWidth = Math.max(16, outWidth);
+  outHeight = Math.max(16, outHeight);
+
   return `${outWidth}x${outHeight}`;
 }
 
