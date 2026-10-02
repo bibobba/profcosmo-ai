@@ -1590,16 +1590,79 @@ async function compositeHairOnlyEdit(
     .png()
     .toBuffer();
 
-  return sharp(sourceBuffer)
+  const composited = await sharp(sourceBuffer)
     .composite([
       {
         input: generatedWithEditableAlpha,
         blend: "over",
       },
     ])
-    .jpeg({
-      quality: 95,
+    .png()
+    .toBuffer();
+
+  return applyWhiteBackground(composited);
+}
+
+async function applyWhiteBackground(imageBuffer: Buffer) {
+  const metadata = await sharp(imageBuffer).metadata();
+
+  if (!metadata.width || !metadata.height) {
+    throw new Error("Не удалось определить размеры результата для удаления фона.");
+  }
+
+  /*
+   * Parse the FINAL composited image, not the input.
+   * This means newly generated hair is included in the foreground mask.
+   */
+  const labels = await runFaceParser(imageBuffer);
+
+  const alpha512 = Buffer.alloc(512 * 512, 0);
+
+  for (let i = 0; i < labels.length; i++) {
+    // Every non-background semantic class belongs to the person.
+    alpha512[i] = labels[i] === 0 ? 0 : 255;
+  }
+
+  const alpha = await sharp(alpha512, {
+    raw: {
+      width: 512,
+      height: 512,
+      channels: 1,
+    },
+  })
+    .resize(metadata.width, metadata.height, {
+      kernel: "nearest",
     })
+    .blur(1.0)
+    .raw()
+    .toBuffer();
+
+  const person = await sharp(imageBuffer)
+    .ensureAlpha()
+    .joinChannel(alpha, {
+      raw: {
+        width: metadata.width,
+        height: metadata.height,
+        channels: 1,
+      },
+    })
+    .png()
+    .toBuffer();
+
+  const white = await sharp({
+    create: {
+      width: metadata.width,
+      height: metadata.height,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    },
+  })
+    .png()
+    .toBuffer();
+
+  return sharp(white)
+    .composite([{ input: person, blend: "over" }])
+    .jpeg({ quality: 95 })
     .toBuffer()
     .then((buffer) => buffer.toString("base64"));
 }
@@ -2547,6 +2610,147 @@ function createShortHeadHairAlpha(
   return sharp(rgba,{raw:{width,height,channels:4}}).png().toBuffer();
 }
 
+const FACE_PARSER_MODEL_URL =
+  "https://github.com/yakhyo/face-parsing/releases/download/weights/resnet18.onnx";
+const FACE_PARSER_MODEL_PATH =
+  "/tmp/profcosmo-face-parser-resnet18.onnx";
+
+let faceParserModelPromise: Promise<Buffer> | null = null;
+let faceParserSessionPromise: Promise<ort.InferenceSession> | null = null;
+
+async function loadFaceParserModel() {
+  if (!faceParserModelPromise) {
+    faceParserModelPromise = (async () => {
+      const fs = await import("node:fs/promises");
+
+      try {
+        const existing = await fs.stat(FACE_PARSER_MODEL_PATH);
+        if (existing.size > 10_000_000) {
+          return fs.readFile(FACE_PARSER_MODEL_PATH);
+        }
+      } catch {}
+
+      console.log("[PROFCOSMO] downloading face parser");
+      const response = await fetch(FACE_PARSER_MODEL_URL);
+      if (!response.ok) {
+        throw new Error(`Не удалось загрузить модель сегментации волос: HTTP ${response.status}`);
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      await fs.writeFile(FACE_PARSER_MODEL_PATH, buffer);
+      return buffer;
+    })();
+  }
+
+  return faceParserModelPromise;
+}
+
+async function getFaceParserSession() {
+  if (!faceParserSessionPromise) {
+    faceParserSessionPromise = loadFaceParserModel().then((model) =>
+      ort.InferenceSession.create(model)
+    );
+  }
+
+  return faceParserSessionPromise;
+}
+
+async function runFaceParser(sourceBuffer: Buffer) {
+  const session = await getFaceParserSession();
+  const raw = await sharp(sourceBuffer)
+    .removeAlpha()
+    .resize(512, 512, { fit: "fill" })
+    .raw()
+    .toBuffer();
+
+  const mean = [0.485, 0.456, 0.406];
+  const std = [0.229, 0.224, 0.225];
+  const input = new Float32Array(1 * 3 * 512 * 512);
+
+  for (let i = 0; i < 512 * 512; i++) {
+    const r = raw[i * 3] / 255;
+    const g = raw[i * 3 + 1] / 255;
+    const b = raw[i * 3 + 2] / 255;
+
+    input[i] = (r - mean[0]) / std[0];
+    input[512 * 512 + i] = (g - mean[1]) / std[1];
+    input[2 * 512 * 512 + i] = (b - mean[2]) / std[2];
+  }
+
+  const inputName = session.inputNames[0];
+  const outputName = session.outputNames[0];
+
+  const result = await session.run({
+    [inputName]: new ort.Tensor("float32", input, [1, 3, 512, 512]),
+  });
+
+  const output = result[outputName];
+  const data = output.data as Float32Array;
+  const labels = new Uint8Array(512 * 512);
+
+  for (let i = 0; i < labels.length; i++) {
+    let bestClass = 0;
+    let bestScore = -Infinity;
+
+    for (let cls = 0; cls < 19; cls++) {
+      const score = data[cls * labels.length + i];
+      if (score > bestScore) {
+        bestScore = score;
+        bestClass = cls;
+      }
+    }
+
+    labels[i] = bestClass;
+  }
+
+  return labels;
+}
+
+function dilateBinaryMask(
+  source: Uint8Array,
+  width: number,
+  height: number,
+  radius: number
+) {
+  if (radius <= 0) return source;
+
+  const integral = new Int32Array((width + 1) * (height + 1));
+
+  for (let y = 0; y < height; y++) {
+    let rowSum = 0;
+    for (let x = 0; x < width; x++) {
+      rowSum += source[y * width + x] ? 1 : 0;
+      const idx = (y + 1) * (width + 1) + (x + 1);
+      integral[idx] =
+        integral[y * (width + 1) + (x + 1)] +
+        rowSum;
+    }
+  }
+
+  const out = new Uint8Array(width * height);
+
+  for (let y = 0; y < height; y++) {
+    const y1 = Math.max(0, y - radius);
+    const y2 = Math.min(height - 1, y + radius);
+
+    for (let x = 0; x < width; x++) {
+      const x1 = Math.max(0, x - radius);
+      const x2 = Math.min(width - 1, x + radius);
+
+      const a = integral[y1 * (width + 1) + x1];
+      const b = integral[y1 * (width + 1) + (x2 + 1)];
+      const d = integral[(y2 + 1) * (width + 1) + x1];
+      const e = integral[(y2 + 1) * (width + 1) + (x2 + 1)];
+
+      if (e - b - d + a > 0) {
+        out[y * width + x] = 1;
+      }
+    }
+  }
+
+  return out;
+}
+
 async function createHairMask(
   width: number,
   height: number,
@@ -2555,421 +2759,123 @@ async function createHairMask(
   structure: string,
   sourceFile: File
 ) {
-  const sourceBuffer =
-    Buffer.from(
-      await sourceFile.arrayBuffer()
-    );
+  const sourceBuffer = Buffer.from(await sourceFile.arrayBuffer());
+  const parserLabels = await runFaceParser(sourceBuffer);
 
-  const face =
-    await detectLargestFace(
-      sourceBuffer,
-      width,
-      height
-    );
+  /*
+   * CelebAMask-HQ / BiSeNet labels used by this model:
+   * 0 background, 1 skin, ..., 13 hair, 14 hat, ...
+   *
+   * We do NOT use a generic head ellipse anymore.
+   * The editable area follows the person's actual segmented hair.
+   */
+  const hair512 = new Uint8Array(512 * 512);
 
-  const landmarks =
-    face.landmarks;
-
-  if (
-    !landmarks ||
-    landmarks.length < 5
-  ) {
-    throw new Error(
-      "Не удалось получить ключевые точки лица. Безопасная зона волос не может быть построена."
-    );
-  }
-
-  if (length === "very-short" || length === "short") {
-    return createShortHeadHairAlpha(width, height, face);
-  }
-
-  const [
-    leftEye,
-    rightEye,
-    nose,
-    leftMouth,
-    rightMouth,
-  ] = landmarks;
-
-  const featureTop =
-    Math.min(
-      leftEye[1],
-      rightEye[1],
-      nose[1],
-      leftMouth[1],
-      rightMouth[1]
-    );
-
-  const featureBottom =
-    Math.max(
-      leftEye[1],
-      rightEye[1],
-      nose[1],
-      leftMouth[1],
-      rightMouth[1]
-    );
-
-  const featureHeight =
-    Math.max(
-      1,
-      featureBottom -
-        featureTop
-    );
-
-  const eyeDistance =
-    Math.max(
-      1,
-      Math.abs(
-        rightEye[0] -
-          leftEye[0]
-      )
-    );
-
-  const faceCx =
-    (leftEye[0] +
-      rightEye[0]) /
-    2;
-
-  const faceCy =
-    (featureTop +
-      featureBottom) /
-      2 +
-    featureHeight *
-      0.12;
-
-  const faceRx =
-    Math.max(
-      eyeDistance * 1.15,
-      (face.x2 - face.x1) *
-        0.50
-    );
-
-  const faceRy =
-    Math.max(
-      featureHeight * 1.55,
-      (face.y2 - face.y1) *
-        0.40
-    );
-
-  const afro =
-    structure ===
-    "afro-curls";
-
-  const longHair =
-    length ===
-      "below-shoulders" ||
-    length ===
-      "long";
-
-  const mediumHair =
-    length ===
-      "medium";
-
-  const outerCx =
-    faceCx;
-
-  const outerCy =
-    faceCy -
-    faceRy * 0.25;
-
-  const outerRx =
-    faceRx *
-    (
-      afro
-        ? 1.85
-        : longHair
-          ? 1.65
-          : mediumHair
-            ? 1.55
-            : 1.48
-    );
-
-  const outerRy =
-    faceRy *
-    (
-      afro
-        ? 1.50
-        : longHair
-          ? 1.85
-          : mediumHair
-            ? 1.40
-            : 1.28
-    );
-
-  const bottomLimit =
-    Math.min(
-      height,
-      featureBottom +
-        featureHeight *
-          (
-            longHair
-              ? 3.00
-              : afro
-                ? 1.10
-                : mediumHair
-                  ? 0.85
-                  : 0.55
-          )
-    );
-
-  const alpha =
-    Buffer.alloc(
-      width * height,
-      255
-    );
-
-  const insideEllipse = (
-    x: number,
-    y: number,
-    cx: number,
-    cy: number,
-    rx: number,
-    ry: number
-  ) => {
-    const dx =
-      (x - cx) /
-      Math.max(
-        1,
-        rx
-      );
-
-    const dy =
-      (y - cy) /
-      Math.max(
-        1,
-        ry
-      );
-
-    return (
-      dx * dx +
-        dy * dy <=
-      1
-    );
-  };
-
-  const neckProtectionRx =
-    faceRx *
-    (
-      longHair
-        ? 1.00
-        : 0.92
-    );
-
-  const neckProtectionRy =
-    featureHeight *
-    (
-      longHair
-        ? 1.15
-        : 0.92
-    );
-
-  const neckProtectionCy =
-    featureBottom +
-    featureHeight *
-      (
-        longHair
-          ? 0.55
-          : 0.35
-      );
-
-  const earRy =
-    featureHeight *
-    0.34;
-
-  const earRx =
-    faceRx *
-    0.23;
-
-  const earY =
-    featureTop +
-    featureHeight *
-      0.55;
-
-  const earOffset =
-    faceRx *
-    0.98;
-
-  let editablePixels = 0;
-
-  for (
-    let y = 0;
-    y < height;
-    y++
-  ) {
-    if (
-      y > bottomLimit
-    ) {
-      continue;
-    }
-
-    for (
-      let x = 0;
-      x < width;
-      x++
-    ) {
-      const insideOuter =
-        insideEllipse(
-          x,
-          y,
-          outerCx,
-          outerCy,
-          outerRx,
-          outerRy
-        );
-
-      if (!insideOuter) {
-        continue;
-      }
-
-      const insideFace =
-        insideEllipse(
-          x,
-          y,
-          faceCx,
-          faceCy,
-          faceRx,
-          faceRy
-        );
-
-      const leftEar =
-        insideEllipse(
-          x,
-          y,
-          faceCx -
-            earOffset,
-          earY,
-          earRx,
-          earRy
-        );
-
-      const rightEar =
-        insideEllipse(
-          x,
-          y,
-          faceCx +
-            earOffset,
-          earY,
-          earRx,
-          earRy
-        );
-
-      const protectedNeck =
-        insideEllipse(
-          x,
-          y,
-          faceCx,
-          neckProtectionCy,
-          neckProtectionRx,
-          neckProtectionRy
-        );
-
-      if (
-        insideFace ||
-        leftEar ||
-        rightEar ||
-        protectedNeck
-      ) {
-        continue;
-      }
-
-      alpha[
-        y * width + x
-      ] = 0;
-
-      editablePixels++;
+  for (let i = 0; i < parserLabels.length; i++) {
+    if (parserLabels[i] === 13) {
+      hair512[i] = 1;
     }
   }
 
-  if (
-    editablePixels <
-    Math.max(
-      1000,
-      Math.round(
-        width *
-          height *
-          0.002
-      )
-    )
-  ) {
-    throw new Error(
-      "Безопасная зона волос получилась слишком маленькой. Фото не отправлено на генерацию."
-    );
-  }
+  /*
+   * Allow the selected haircut to grow beyond the existing hairstyle,
+   * but only as a controlled halo around the actual hair.
+   */
+  const haloRadius =
+    length === "long" ? 70 :
+    length === "below-shoulders" ? 55 :
+    length === "medium" ? 35 :
+    length === "short" ? 22 :
+    14;
 
-  console.log(
-    "[PROFCOSMO] geometric hair edit zone",
-    {
-      face: {
-        x1: Math.round(
-          face.x1
-        ),
-        y1: Math.round(
-          face.y1
-        ),
-        x2: Math.round(
-          face.x2
-        ),
-        y2: Math.round(
-          face.y2
-        ),
-      },
-      landmarks,
-      editablePixels,
-      editablePercent:
-        Number(
-          (
-            editablePixels /
-            (width * height) *
-            100
-          ).toFixed(3)
-        ),
-      gender,
-      length,
-      structure,
-    }
+  const editable512 = dilateBinaryMask(
+    hair512,
+    512,
+    512,
+    haloRadius
   );
 
-  const rgba =
-    Buffer.alloc(
-      width *
-        height *
-        4
-    );
+  /*
+   * Never permit the semantic skin/face classes, ears, neck or clothing
+   * to become editable. This is the hard identity lock.
+   */
+  for (let i = 0; i < editable512.length; i++) {
+    const cls = parserLabels[i];
 
-  for (
-    let i = 0;
-    i < alpha.length;
-    i++
-  ) {
-    const offset =
-      i * 4;
-
-    rgba[offset] =
-      255;
-
-    rgba[offset + 1] =
-      255;
-
-    rgba[offset + 2] =
-      255;
-
-    rgba[offset + 3] =
-      alpha[i];
+    if (
+      cls === 1 || // skin
+      cls === 2 || // nose
+      cls === 3 || // eyes/eyeglasses
+      cls === 4 ||
+      cls === 5 ||
+      cls === 6 ||
+      cls === 7 ||
+      cls === 8 ||
+      cls === 9 ||
+      cls === 10 || // mouth
+      cls === 11 ||
+      cls === 12 ||
+      cls === 15 || // neck_l
+      cls === 16 || // neck
+      cls === 17    // cloth
+    ) {
+      editable512[i] = 0;
+    }
   }
 
-  return sharp(
-    rgba,
-    {
-      raw: {
-        width,
-        height,
-        channels: 4,
-      },
-    }
+  const resized = await sharp(
+    Buffer.from(editable512)
   )
+    .resize(width, height, {
+      kernel: "nearest",
+    })
+    .raw()
+    .toBuffer();
+
+  const alpha = Buffer.alloc(width * height, 255);
+
+  for (let i = 0; i < resized.length; i++) {
+    if (resized[i]) {
+      alpha[i] = 0;
+    }
+  }
+
+  /*
+   * Add a very small feather only at the hair boundary.
+   * The face itself remains protected by the semantic mask.
+   */
+  const feathered = await sharp(alpha, {
+    raw: {
+      width,
+      height,
+      channels: 1,
+    },
+  })
+    .blur(1.2)
+    .raw()
+    .toBuffer();
+
+  const rgba = Buffer.alloc(width * height * 4);
+
+  for (let i = 0; i < alpha.length; i++) {
+    const o = i * 4;
+    rgba[o] = 255;
+    rgba[o + 1] = 255;
+    rgba[o + 2] = 255;
+    rgba[o + 3] = feathered[i];
+  }
+
+  return sharp(rgba, {
+    raw: {
+      width,
+      height,
+      channels: 4,
+    },
+  })
     .png()
     .toBuffer();
 }
+
 
 /* =========================================================
    VERCEL BLOB
