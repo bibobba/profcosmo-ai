@@ -1568,7 +1568,7 @@ async function compositeHairOnlyEdit(
     .ensureAlpha()
     .extractChannel("alpha")
     .negate()
-    .blur(2.2)
+     .blur(0.7)
     .raw()
     .toBuffer();
 
@@ -2637,18 +2637,25 @@ async function createHairMask(
     featureHeight *
       0.12;
 
+  /*
+   * Identity lock:
+   * the previous face ellipse was too small vertically, so the generated
+   * image could replace forehead/temples and visually change the face.
+   * Protect a deliberately larger region based on the detected face box.
+   * Hair can still be generated outside this protected face zone.
+   */
   const faceRx =
     Math.max(
-      eyeDistance * 1.15,
+      eyeDistance * 1.28,
       (face.x2 - face.x1) *
-        0.50
+        0.60
     );
 
   const faceRy =
     Math.max(
-      featureHeight * 1.55,
+      featureHeight * 1.80,
       (face.y2 - face.y1) *
-        0.40
+        0.55
     );
 
   const afro =
