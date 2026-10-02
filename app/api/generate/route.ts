@@ -2708,7 +2708,8 @@ async function createHairMask(
    * Class 13 = hair in the 19-class CelebAMask-HQ layout.
    */
   const labels = await segmentFace(sourceBuffer);
-  const hair = new Uint8Array(512 * 512);
+  const pixelCount = width * height;
+  const hair = new Uint8Array(pixelCount);
 
   for (let i = 0; i < hair.length; i++) {
     if (labels[i] === 13) {
@@ -2717,10 +2718,11 @@ async function createHairMask(
   }
 
   /*
-   * The radius is a maximum distance from REAL existing hair,
-   * not a percentage of head size.
+   * Dilation distances are defined in the parser's 512px coordinate
+   * system. Scale them to the actual source resolution so the editable
+   * halo has consistent physical size on different uploaded photos.
    */
-  const radius =
+  const baseRadius =
     length === "long" || length === "below-shoulders"
       ? 72
       : length === "medium"
@@ -2729,10 +2731,20 @@ async function createHairMask(
           ? 28
           : 16;
 
+  const scale = Math.max(
+    width,
+    height
+  ) / 512;
+
+  const radius = Math.max(
+    4,
+    Math.round(baseRadius * scale)
+  );
+
   const editable = dilateMask(
     hair,
-    512,
-    512,
+    width,
+    height,
     radius
   );
 
