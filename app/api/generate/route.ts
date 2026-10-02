@@ -2450,6 +2450,96 @@ async function detectLargestFace(
   };
 }
 
+
+function createShortHeadHairAlpha(
+  width: number,
+  height: number,
+  face: {
+    x1: number; y1: number; x2: number; y2: number;
+    confidence: number;
+    landmarks?: Array<[number, number]> | null;
+  }
+) {
+  const alpha = Buffer.alloc(width * height, 255);
+  const landmarks = face.landmarks;
+  if (!landmarks || landmarks.length < 5) {
+    throw new Error("Не удалось получить ключевые точки лица для короткой стрижки.");
+  }
+  const [leftEye, rightEye, nose, leftMouth, rightMouth] = landmarks;
+  const eyeDistance = Math.max(1, Math.abs(rightEye[0] - leftEye[0]));
+  const centerX = (leftEye[0] + rightEye[0]) / 2;
+  const featureTop = Math.min(leftEye[1], rightEye[1], nose[1], leftMouth[1], rightMouth[1]);
+  const featureBottom = Math.max(leftEye[1], rightEye[1], nose[1], leftMouth[1], rightMouth[1]);
+  const featureHeight = Math.max(1, featureBottom - featureTop);
+
+  const outerTop = featureTop - featureHeight * 2.45;
+  const outerBottom = featureBottom + featureHeight * 0.35;
+  const outerCenterY = (outerTop + outerBottom) / 2;
+  const outerRadiusX = eyeDistance * 1.70;
+  const outerRadiusY = Math.max(1, (outerBottom - outerTop) / 2);
+
+  const estimatedHairlineY = Math.min(
+    face.y1 - featureHeight * 0.15,
+    featureTop - featureHeight * 1.35
+  );
+  const protectedFaceBottom = featureBottom + featureHeight * 0.55;
+  const earY = featureTop + featureHeight * 0.50;
+  const earRadiusX = eyeDistance * 0.25;
+  const earRadiusY = featureHeight * 0.45;
+  const neckCenterY = featureBottom + featureHeight * 0.45;
+  const neckRadiusX = eyeDistance;
+  const neckRadiusY = featureHeight * 0.70;
+
+  const insideEllipse = (x:number,y:number,cx:number,cy:number,rx:number,ry:number) => {
+    const dx=(x-cx)/Math.max(1,rx);
+    const dy=(y-cy)/Math.max(1,ry);
+    return dx*dx+dy*dy<=1;
+  };
+
+  let editablePixels=0;
+  const top=Math.max(0,Math.floor(outerTop));
+  const bottom=Math.min(height,Math.ceil(outerBottom));
+
+  for(let y=top;y<bottom;y++){
+    for(let x=0;x<width;x++){
+      if(!insideEllipse(x,y,centerX,outerCenterY,outerRadiusX,outerRadiusY)) continue;
+
+      let protectedFace=false;
+      if(y>=estimatedHairlineY && y<=protectedFaceBottom){
+        const t=Math.max(0,Math.min(1,(y-estimatedHairlineY)/Math.max(1,protectedFaceBottom-estimatedHairlineY)));
+        protectedFace=Math.abs(x-centerX)<=eyeDistance*(0.72+0.30*t);
+      }
+
+      const leftEar=insideEllipse(x,y,centerX-eyeDistance*1.05,earY,earRadiusX,earRadiusY);
+      const rightEar=insideEllipse(x,y,centerX+eyeDistance*1.05,earY,earRadiusX,earRadiusY);
+      const protectedNeck=insideEllipse(x,y,centerX,neckCenterY,neckRadiusX,neckRadiusY);
+
+      if(protectedFace||leftEar||rightEar||protectedNeck) continue;
+      alpha[y*width+x]=0;
+      editablePixels++;
+    }
+  }
+
+  if(editablePixels<Math.max(10000,Math.round(width*height*0.003))){
+    throw new Error("Безопасная зона короткой стрижки получилась слишком маленькой.");
+  }
+
+  console.log("[PROFCOSMO] short-hair geometric edit zone",{
+    editablePixels,
+    editablePercent:Number(((editablePixels/(width*height))*100).toFixed(3)),
+    estimatedHairlineY:Math.round(estimatedHairlineY),
+    outerTop:Math.round(outerTop),
+    outerBottom:Math.round(outerBottom)
+  });
+
+  const rgba=Buffer.alloc(width*height*4);
+  for(let i=0;i<alpha.length;i++){
+    const o=i*4;
+    rgba[o]=255; rgba[o+1]=255; rgba[o+2]=255; rgba[o+3]=alpha[i];
+  }
+  return sharp(rgba,{raw:{width,height,channels:4}}).png().toBuffer();
+}
+
 async function createHairMask(
   width: number,
   height: number,
@@ -2480,6 +2570,10 @@ async function createHairMask(
     throw new Error(
       "Не удалось получить ключевые точки лица. Безопасная зона волос не может быть построена."
     );
+  }
+
+  if (length === "very-short" || length === "short") {
+    return createShortHeadHairAlpha(width, height, face);
   }
 
   const [
