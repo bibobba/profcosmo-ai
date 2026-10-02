@@ -2852,6 +2852,105 @@ async function createHairMask(
 }
 
 
+async function createMaskDebugImage(
+  sourceFile: File,
+  hairMask: Buffer
+) {
+  const sourceBuffer = Buffer.from(await sourceFile.arrayBuffer());
+  const meta = await sharp(sourceBuffer).metadata();
+
+  if (!meta.width || !meta.height) {
+    throw new Error("Не удалось определить размеры debug-фотографии.");
+  }
+
+  const width = meta.width;
+  const height = meta.height;
+
+  const editable = await sharp(hairMask)
+    .extractChannel("alpha")
+    .threshold(128)
+    .negate()
+    .raw()
+    .toBuffer();
+
+  const overlayRgba = Buffer.alloc(width * height * 4);
+
+  for (let i = 0; i < editable.length; i++) {
+    const o = i * 4;
+    const active = editable[i] > 0;
+    overlayRgba[o] = 0;
+    overlayRgba[o + 1] = 255;
+    overlayRgba[o + 2] = 80;
+    overlayRgba[o + 3] = active ? 115 : 0;
+  }
+
+  const original = await sharp(sourceBuffer)
+    .resize(480, 640, { fit: "fill" })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+
+  const overlay = await sharp(sourceBuffer)
+    .composite([
+      {
+        input: overlayRgba,
+        raw: {
+          width,
+          height,
+          channels: 4,
+        },
+        blend: "over",
+      },
+    ])
+    .resize(480, 640, { fit: "fill" })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+
+  const maskOnly = await sharp(
+    editable,
+    {
+      raw: {
+        width,
+        height,
+        channels: 1,
+      },
+    }
+  )
+    .resize(480, 640, { fit: "fill" })
+    .png()
+    .toBuffer();
+
+  const panelGap = 16;
+  const canvasWidth = 480 * 3 + panelGap * 2;
+  const canvasHeight = 680;
+
+  const canvas = sharp({
+    create: {
+      width: canvasWidth,
+      height: canvasHeight,
+      channels: 3,
+      background: {
+        r: 245,
+        g: 245,
+        b: 245,
+      },
+    },
+  });
+
+  return canvas
+    .composite([
+      { input: original, left: 0, top: 40 },
+      { input: overlay, left: 480 + panelGap, top: 40 },
+      {
+        input: maskOnly,
+        left: 960 + panelGap * 2,
+        top: 40,
+      },
+    ])
+    .jpeg({ quality: 90 })
+    .toBuffer()
+    .then((buffer) => buffer.toString("base64"));
+}
+
 /* =========================================================
    VERCEL BLOB
    ========================================================= */
@@ -3297,6 +3396,34 @@ export async function POST(
           }
         );
       }
+    }
+
+    if (String(formData.get("debugMask") || "") === "true") {
+      const firstJob = variants[0];
+      const debugLength = String(firstJob.length || "medium");
+      const debugStructure = String(firstJob.structure || "");
+
+      const source = await prepareSourceImage(image);
+      const hairMask = await createHairMask(
+        source.width,
+        source.height,
+        gender,
+        debugLength,
+        debugStructure,
+        source.file
+      );
+
+      const debugBase64 = await createMaskDebugImage(
+        source.file,
+        hairMask
+      );
+
+      return NextResponse.json({
+        success: true,
+        debugImage: `data:image/jpeg;base64,${debugBase64}`,
+        note: "Средняя панель: зелёная область разрешена для изменения. Правая: бинарная editable-mask.",
+        length: debugLength,
+      });
     }
 
     /* -----------------------------------------------------
