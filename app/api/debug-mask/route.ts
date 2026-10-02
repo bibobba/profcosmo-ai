@@ -1234,10 +1234,10 @@ function createSafeGeometricMask(
   const featureBottom=Math.max(leftEye[1],rightEye[1],nose[1],leftMouth[1],rightMouth[1]);
   const featureHeight=Math.max(1,featureBottom-featureTop);
 
-  const outerTop=featureTop-featureHeight*2.45;
-  const outerBottom=featureBottom+featureHeight*0.35;
+  const outerTop=featureTop-featureHeight*2.55;
+  const outerBottom=featureBottom+featureHeight*0.08;
   const outerCenterY=(outerTop+outerBottom)/2;
-  const outerRadiusX=eyeDistance*1.70;
+  const outerRadiusX=eyeDistance*1.48;
   const outerRadiusY=Math.max(1,(outerBottom-outerTop)/2);
 
   const estimatedHairlineY=Math.min(face.y1-featureHeight*0.15,featureTop-featureHeight*1.35);
@@ -1948,7 +1948,7 @@ export async function POST(request: Request) {
       mobileHairNetCleanMask,
       diagnostic: {
 
-        diagnosticVersion: "scrfd-short-head-geometric-2",
+        diagnosticVersion: "scrfd-short-head-geometric-3-tight",
       hairClassIndex: HAIR_CLASS_INDEX,
         editablePixels: (() => {
           const alpha = maskAlpha;
