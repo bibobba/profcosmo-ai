@@ -1637,15 +1637,15 @@ async function applyWhiteBackground(imageBuffer: Buffer) {
     .raw()
     .toBuffer();
 
-  const person = await sharp(imageBuffer)
-    .ensureAlpha()
-    .joinChannel(alpha, {
-      raw: {
-        width: metadata.width,
-        height: metadata.height,
-        channels: 1,
-      },
-    })
+  // Build the person alpha as an actual PNG mask and use Sharp's
+  // dest-in blend. This is more reliable than joining a raw channel.
+  const personMask = await sharp(alpha, {
+    raw: {
+      width: metadata.width,
+      height: metadata.height,
+      channels: 1,
+    },
+  })
     .png()
     .toBuffer();
 
@@ -1657,14 +1657,22 @@ async function applyWhiteBackground(imageBuffer: Buffer) {
       background: { r: 255, g: 255, b: 255, alpha: 1 },
     },
   })
-    .png()
+    .composite([
+      {
+        input: imageBuffer,
+        blend: "over",
+      },
+    ])
+    .composite([
+      {
+        input: personMask,
+        blend: "dest-in",
+      },
+    ])
+    .jpeg({ quality: 95 })
     .toBuffer();
 
-  return sharp(white)
-    .composite([{ input: person, blend: "over" }])
-    .jpeg({ quality: 95 })
-    .toBuffer()
-    .then((buffer) => buffer.toString("base64"));
+  return white.toString("base64");
 }
 
 function hexToRgb(hex: string) {
@@ -2657,7 +2665,15 @@ async function getFaceParserSession() {
 
 async function runFaceParser(sourceBuffer: Buffer) {
   const session = await getFaceParserSession();
-  const raw = await sharp(sourceBuffer)
+
+  // Always normalize to a known encoded image first. This prevents Sharp
+  // from receiving an unexpected/raw buffer from a previous pipeline step.
+  const normalizedBuffer = await sharp(sourceBuffer)
+    .rotate()
+    .png()
+    .toBuffer();
+
+  const raw = await sharp(normalizedBuffer)
     .removeAlpha()
     .resize(512, 512, { fit: "fill" })
     .raw()
@@ -2772,7 +2788,7 @@ async function createHairMask(
   const hair512 = new Uint8Array(512 * 512);
 
   for (let i = 0; i < parserLabels.length; i++) {
-    if (parserLabels[i] === 13) {
+    if (parserLabels[i] === 17) {
       hair512[i] = 1;
     }
   }
@@ -2802,23 +2818,8 @@ async function createHairMask(
   for (let i = 0; i < editable512.length; i++) {
     const cls = parserLabels[i];
 
-    if (
-      cls === 1 || // skin
-      cls === 2 || // nose
-      cls === 3 || // eyes/eyeglasses
-      cls === 4 ||
-      cls === 5 ||
-      cls === 6 ||
-      cls === 7 ||
-      cls === 8 ||
-      cls === 9 ||
-      cls === 10 || // mouth
-      cls === 11 ||
-      cls === 12 ||
-      cls === 15 || // neck_l
-      cls === 16 || // neck
-      cls === 17    // cloth
-    ) {
+    if (cls >= 1 && cls <= 16) {
+      // Protect every semantic face/body region except hair (17).
       editable512[i] = 0;
     }
   }
