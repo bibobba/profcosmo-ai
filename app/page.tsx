@@ -1253,9 +1253,10 @@ export default function Home() {
               <span>Это может занять некоторое время</span>
             </div>
           ) : (
-            <button
-              type="button"
-              disabled={!image || debugLoading}
+            <div>
+              <button
+                type="button"
+                disabled={!image || debugLoading}
               onClick={inspectMask}
               style={{
                 width: "100%",
@@ -1273,9 +1274,10 @@ export default function Home() {
               {debugLoading ? "Проверяем маску…" : "Проверить область волос"}
             </button>
 
-            <button className="generate" type="button" disabled={!image} onClick={generate}>
-              Подобрать {variants.length === 1 ? "вариант" : `${variants.length} варианта`}
-            </button>
+              <button className="generate" type="button" disabled={!image} onClick={generate}>
+                Подобрать {variants.length === 1 ? "вариант" : `${variants.length} варианта`}
+              </button>
+            </div>
           )}
 
           {error ? <p className="error">{error}</p> : null}
