@@ -1534,8 +1534,8 @@ async function compositeHairOnlyEdit(
   const height = sourceMetadata.height;
 
   const cleanBase64 = generatedBase64
-    .replace(/^data:image\\/[^;]+;base64,/, "")
-    .replace(/\\s/g, "");
+    .replace(/^data:image\/[^;]+;base64,/, "")
+    .replace(/\s/g, "");
 
   const generatedInput = Buffer.from(
     cleanBase64,
