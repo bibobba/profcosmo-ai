@@ -1558,10 +1558,17 @@ async function compositeHairOnlyEdit(
    *   alpha 255 = take generated image
    *   alpha 0   = keep original
    */
+  /*
+   * Feather only the immediate hair/protected boundary. The previous
+   * binary composite produced a visible seam along the forehead and
+   * temples. A narrow alpha transition keeps the face/source locked
+   * while removing that hard edge.
+   */
   const editableAlpha = await sharp(hairMask)
     .ensureAlpha()
     .extractChannel("alpha")
     .negate()
+    .blur(2.2)
     .raw()
     .toBuffer();
 
