@@ -467,6 +467,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState("");
+  const [debugMask, setDebugMask] = useState("");
+  const [debugLoading, setDebugLoading] = useState(false);
 
   const loadingMessages = [
     "Подготавливаем фотографию…",
@@ -513,6 +515,46 @@ export default function Home() {
     setResultImages([]);
     setError("");
   }
+  async function inspectMask() {
+    if (!image) {
+      setError("Сначала загрузите фотографию.");
+      return;
+    }
+
+    setDebugLoading(true);
+    setError("");
+    setDebugMask("");
+
+    try {
+      const formData = new FormData();
+      formData.append("image", image);
+      formData.append("gender", gender);
+      formData.append("variants", JSON.stringify(variants));
+      formData.append("debugMask", "true");
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.debugImage) {
+        throw new Error(data.error || "Не удалось построить debug-маску.");
+      }
+
+      setDebugMask(data.debugImage);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Не удалось построить debug-маску."
+      );
+    } finally {
+      setDebugLoading(false);
+    }
+  }
+
   function updateVariant(index: number, changes: Partial<Variant>) {
     setVariants((current) =>
       current.map((variant, variantIndex) =>
@@ -1211,12 +1253,52 @@ export default function Home() {
               <span>Это может занять некоторое время</span>
             </div>
           ) : (
+            <button
+              type="button"
+              disabled={!image || debugLoading}
+              onClick={inspectMask}
+              style={{
+                width: "100%",
+                marginBottom: 12,
+                padding: "13px 16px",
+                borderRadius: 10,
+                border: "1px solid #d46925",
+                background: "#fff",
+                color: "#d46925",
+                fontWeight: 700,
+                cursor: !image || debugLoading ? "default" : "pointer",
+                opacity: !image || debugLoading ? 0.55 : 1,
+              }}
+            >
+              {debugLoading ? "Проверяем маску…" : "Проверить область волос"}
+            </button>
+
             <button className="generate" type="button" disabled={!image} onClick={generate}>
               Подобрать {variants.length === 1 ? "вариант" : `${variants.length} варианта`}
             </button>
           )}
 
           {error ? <p className="error">{error}</p> : null}
+
+          {debugMask ? (
+            <div style={{ marginTop: 24 }}>
+              <h3 style={{ marginBottom: 10 }}>Проверка маски волос</h3>
+              <p style={{ marginTop: 0, color: "#77736c", fontSize: 14, lineHeight: 1.5 }}>
+                Слева — оригинал. В центре — зелёная область, которую система разрешает менять.
+                Справа — сама бинарная маска.
+              </p>
+              <img
+                src={debugMask}
+                alt="Debug-маска волос"
+                style={{
+                  width: "100%",
+                  display: "block",
+                  borderRadius: 12,
+                  background: "#f3f1ed",
+                }}
+              />
+            </div>
+          ) : null}
         </section>
 
         {streamingImages.some(Boolean) ? (
