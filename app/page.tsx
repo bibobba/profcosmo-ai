@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PalettePicker } from "@/components/PalettePicker";
+import { removeBackground } from "@imgly/background-removal";
 
 type Option = {
   value: string;
@@ -467,6 +468,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState("");
+  const [preparingImage, setPreparingImage] = useState(false);
 
   const loadingMessages = [
     "Подготавливаем фотографию…",
@@ -505,13 +507,38 @@ export default function Home() {
     });
   }, [variants.length, individualColors.length]);
 
-  function handleImage(file: File | null) {
+  async function handleImage(file: File | null) {
     if (!file) return;
 
-    setImage(file);
-    setPreview(URL.createObjectURL(file));
-    setResultImages([]);
+    setPreparingImage(true);
     setError("");
+    setResultImages([]);
+
+    try {
+      const cutout = await removeBackground(file);
+      const bitmap = await createImageBitmap(cutout);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Не удалось подготовить изображение.");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, bitmap.width, bitmap.height);
+      ctx.drawImage(bitmap, 0, 0);
+      const blob = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Не удалось сохранить изображение.")), "image/png")
+      );
+      const prepared = new File([blob], "profcosmo-prepared.png", { type: "image/png" });
+      setImage(prepared);
+      setPreview(URL.createObjectURL(prepared));
+    } catch (err) {
+      console.error(err);
+      setImage(file);
+      setPreview(URL.createObjectURL(file));
+      setError("Не удалось автоматически убрать фон. Используется исходная фотография.");
+    } finally {
+      setPreparingImage(false);
+    }
   }
 
   function updateVariant(index: number, changes: Partial<Variant>) {
@@ -1212,7 +1239,7 @@ export default function Home() {
               <span>Это может занять некоторое время</span>
             </div>
           ) : (
-            <button className="generate" type="button" disabled={!image} onClick={generate}>
+            <button className="generate" type="button" disabled={!image || preparingImage} onClick={generate}>
               Подобрать {variants.length === 1 ? "вариант" : `${variants.length} варианта`}
             </button>
           )}
