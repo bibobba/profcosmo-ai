@@ -1533,12 +1533,23 @@ async function compositeHairOnlyEdit(
   const width = sourceMetadata.width;
   const height = sourceMetadata.height;
 
-  const generatedBuffer = await sharp(
-    Buffer.from(
-      generatedBase64,
-      "base64"
-    )
-  )
+  const cleanBase64 = generatedBase64
+    .replace(/^data:image\\/[^;]+;base64,/, "")
+    .replace(/\\s/g, "");
+
+  const generatedInput = Buffer.from(
+    cleanBase64,
+    "base64"
+  );
+
+  if (generatedInput.length < 32) {
+    throw new Error("OpenAI вернул пустое или повреждённое изображение.");
+  }
+
+  const generatedBuffer = await sharp(generatedInput, {
+    failOn: "none",
+  })
+    .rotate()
     .resize(width, height, {
       fit: "fill",
       kernel: "lanczos3",
@@ -1649,26 +1660,21 @@ async function applyWhiteBackground(imageBuffer: Buffer) {
     .png()
     .toBuffer();
 
-  const white = await sharp({
-    create: {
-      width: metadata.width,
-      height: metadata.height,
-      channels: 4,
-      background: { r: 255, g: 255, b: 255, alpha: 1 },
-    },
-  })
-    .composite([
-      {
-        input: imageBuffer,
-        blend: "over",
-      },
-    ])
+  const white = await sharp(imageBuffer)
+    .ensureAlpha()
     .composite([
       {
         input: personMask,
         blend: "dest-in",
       },
     ])
+    .flatten({
+      background: {
+        r: 255,
+        g: 255,
+        b: 255,
+      },
+    })
     .jpeg({ quality: 95 })
     .toBuffer();
 
