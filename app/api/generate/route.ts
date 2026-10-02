@@ -2647,13 +2647,13 @@ async function createHairMask(
    * Therefore a wide head stays wide, a narrow head stays narrow,
    * and the editable geometry follows the photograph.
    *
-   * Class 17 = hair in the 19-class CelebAMask-HQ layout.
+   * Class 13 = hair in the 19-class CelebAMask-HQ layout.
    */
   const labels = await segmentFace(sourceBuffer);
   const hair = new Uint8Array(512 * 512);
 
   for (let i = 0; i < hair.length; i++) {
-    if (labels[i] === 17) {
+    if (labels[i] === 13) {
       hair[i] = 1;
     }
   }
@@ -2664,12 +2664,12 @@ async function createHairMask(
    */
   const radius =
     length === "long" || length === "below-shoulders"
-      ? 55
+      ? 72
       : length === "medium"
-        ? 32
+        ? 46
         : length === "short"
-          ? 18
-          : 10;
+          ? 28
+          : 16;
 
   const editable = dilateMask(
     hair,
@@ -2684,7 +2684,7 @@ async function createHairMask(
    * editable. This is the hard identity lock.
    */
   for (let i = 0; i < editable.length; i++) {
-    if (labels[i] !== 0 && labels[i] !== 17) {
+    if (labels[i] !== 0 && labels[i] !== 13) {
       editable[i] = 0;
     }
   }
