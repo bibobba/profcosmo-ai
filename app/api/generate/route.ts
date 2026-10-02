@@ -2515,8 +2515,43 @@ async function getFaceParserSession() {
 async function segmentFace(sourceBuffer: Buffer) {
   const session = await getFaceParserSession();
 
+  const sourceMeta = await sharp(sourceBuffer).metadata();
+  if (!sourceMeta.width || !sourceMeta.height) {
+    throw new Error("Не удалось определить размеры фотографии для face parsing.");
+  }
+
+  /*
+   * BiSeNet/CelebAMask-HQ is a face-parsing model. Running it on the
+   * entire portrait when the face occupies only a small part of the
+   * frame makes the 512px prediction too coarse.
+   *
+   * Run parsing on a generous face-centered crop, then restore the
+   * semantic labels to the original image coordinates.
+   *
+   * CelebAMask-HQ mapping: 13 = hair.
+   */
+  const face = await detectLargestFace(
+    sourceBuffer,
+    sourceMeta.width,
+    sourceMeta.height
+  );
+
+  const faceWidth = Math.max(1, face.x2 - face.x1);
+  const faceHeight = Math.max(1, face.y2 - face.y1);
+  const side = Math.max(faceWidth, faceHeight) * 2.6;
+  const centerX = (face.x1 + face.x2) / 2;
+  const centerY = (face.y1 + face.y2) / 2 - faceHeight * 0.15;
+
+  const left = Math.max(0, Math.floor(centerX - side / 2));
+  const top = Math.max(0, Math.floor(centerY - side / 2));
+  const right = Math.min(sourceMeta.width, Math.ceil(centerX + side / 2));
+  const bottom = Math.min(sourceMeta.height, Math.ceil(centerY + side / 2));
+
+  const cropWidth = Math.max(1, right - left);
+  const cropHeight = Math.max(1, bottom - top);
+
   const normalized = await sharp(sourceBuffer)
-    .rotate()
+    .extract({ left, top, width: cropWidth, height: cropHeight })
     .removeAlpha()
     .resize(512, 512, { fit: "fill" })
     .raw()
@@ -2547,7 +2582,7 @@ async function segmentFace(sourceBuffer: Buffer) {
 
   const output = result[session.outputNames[0]];
   const data = output.data as Float32Array;
-  const labels = new Uint8Array(pixels);
+  const cropLabels = new Uint8Array(pixels);
 
   for (let i = 0; i < pixels; i++) {
     let bestClass = 0;
@@ -2562,7 +2597,30 @@ async function segmentFace(sourceBuffer: Buffer) {
       }
     }
 
-    labels[i] = bestClass;
+    cropLabels[i] = bestClass;
+  }
+
+  const restored = await sharp(
+    Buffer.from(cropLabels),
+    { raw: { width: 512, height: 512, channels: 1 } }
+  )
+    .resize(cropWidth, cropHeight, { kernel: "nearest" })
+    .raw()
+    .toBuffer();
+
+  const labels = new Uint8Array(
+    sourceMeta.width * sourceMeta.height
+  );
+
+  for (let y = 0; y < cropHeight; y++) {
+    const dstOffset = (top + y) * sourceMeta.width + left;
+    const srcOffset = y * cropWidth;
+    restored.copy(
+      labels,
+      dstOffset,
+      srcOffset,
+      srcOffset + cropWidth
+    );
   }
 
   return labels;
