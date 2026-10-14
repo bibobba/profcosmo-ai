@@ -41,7 +41,7 @@ const GROUPS = [
   { value: "all", label: "Все группы" },
   ...Array.from(new Set(PALETTE.map((entry) => entry.family))).map((family) => ({
     value: family,
-    label: FAMILY_LABELS[family] || family,
+    label: PALETTE.find((entry) => entry.family === family)?.label || FAMILY_LABELS[family] || family,
   })),
 ];
 
@@ -104,7 +104,7 @@ export function PalettePicker({ value, onChange }: {
           <div>
             <div style={{ fontSize: 11, color: "#77736c", marginBottom: 3 }}>ВЫБРАННЫЙ ОТТЕНОК</div>
             <div style={{ fontSize: 20, fontWeight: 800 }}>{selected.code}</div>
-            <div style={{ fontSize: 13, color: "#6e665e", marginTop: 3 }}>{FAMILY_LABELS[selected.family] || selected.family}</div>
+            <div style={{ fontSize: 13, color: "#6e665e", marginTop: 3 }}>{selected.label || FAMILY_LABELS[selected.family] || selected.family}</div>
           </div>
         </div>
       )}
