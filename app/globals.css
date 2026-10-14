@@ -365,3 +365,53 @@ footer {
   color: #2f2a25;
   font-weight: 600;
 }
+
+
+.color-mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.color-mode-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid #ded8cf;
+  border-radius: 10px;
+  background: #fff;
+  color: #4f4a44;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.color-mode-option strong {
+  font-size: 14px;
+}
+
+.color-mode-option span {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #77736c;
+}
+
+.color-mode-option:hover {
+  border-color: #d46925;
+}
+
+.color-mode-option.color-mode-active {
+  border: 2px solid #d46925;
+  padding: 12px 14px;
+  background: #fff7f1;
+  color: #302b26;
+}
+
+@media (max-width: 600px) {
+  .color-mode {
+    grid-template-columns: 1fr;
+  }
+}
