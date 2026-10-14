@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { PALETTE } from "@/lib/palette";
-import { deflateSync } from "node:zlib";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import {
   put,
   issueSignedToken,
@@ -1463,36 +1464,10 @@ async function streamOneVariant(params: {
   return finalBase64;
 }
 
-function hexToRgb(hex: string) {
-  const clean = hex.replace("#", "");
-  return { r: parseInt(clean.slice(0, 2), 16), g: parseInt(clean.slice(2, 4), 16), b: parseInt(clean.slice(4, 6), 16) };
-}
-
-function crc32(buffer: Buffer) {
-  let crc = 0xffffffff;
-  for (const byte of buffer) {
-    crc ^= byte;
-    for (let i = 0; i < 8; i++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
-  }
-  return (crc ^ 0xffffffff) >>> 0;
-}
-
-function pngChunk(type: string, data: Buffer) {
-  const typeBuffer = Buffer.from(type, "ascii");
-  const length = Buffer.alloc(4); length.writeUInt32BE(data.length, 0);
-  const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([typeBuffer, data])), 0);
-  return Buffer.concat([length, typeBuffer, data, crc]);
-}
-
-function createPaletteReference(hex: string, code: string) {
-  const { r, g, b } = hexToRgb(hex);
-  const width = 512, height = 512;
-  const row = Buffer.alloc(1 + width * 4); row[0] = 0;
-  for (let x = 0; x < width; x++) { const o = 1 + x * 4; row[o] = r; row[o + 1] = g; row[o + 2] = b; row[o + 3] = 255; }
-  const raw = Buffer.concat(Array.from({ length: height }, () => row));
-  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 6;
-  const png = Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]), pngChunk("IHDR", ihdr), pngChunk("IDAT", deflateSync(raw, { level: 9 })), pngChunk("IEND", Buffer.alloc(0))]);
-  return new File([png], "palette-" + code.replaceAll("/", "_") + ".png", { type: "image/png" });
+async function createPaletteReference(imagePath: string, code: string) {
+  const absolutePath = path.join(process.cwd(), "public", imagePath.replace(/^\\//, ""));
+  const imageBuffer = await readFile(absolutePath);
+  return new File([imageBuffer], "palette-" + code.replaceAll("/", "_") + ".png", { type: "image/png" });
 }
 
 /* =========================================================
@@ -1952,8 +1927,8 @@ export async function POST(
     });
 
     const jobs =
-      variants.map(
-        (
+      await Promise.all(variants.map(
+        async (
           variant,
           index
         ) => {
@@ -2049,7 +2024,7 @@ export async function POST(
 
           const colorCode = String(selectedColor?.colorCode || "");
           const paletteEntry = colorCode ? PALETTE.find((item) => item.code === colorCode) : null;
-          const paletteReference = paletteEntry ? createPaletteReference(paletteEntry.hex, paletteEntry.code) : null;
+          const paletteReference = paletteEntry ? await createPaletteReference(paletteEntry.imagePath, paletteEntry.code) : null;
 
           const prompt =
             buildPrompt({
@@ -2082,7 +2057,7 @@ export async function POST(
             paletteReference,
           };
         }
-      );
+      ));
 
     /* -----------------------------------------------------
        STREAM ALL VARIANTS
