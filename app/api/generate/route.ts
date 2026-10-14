@@ -1465,7 +1465,7 @@ async function streamOneVariant(params: {
 }
 
 async function createPaletteReference(imagePath: string, code: string) {
-  const absolutePath = path.join(process.cwd(), "public", imagePath.replace(/^\\//, ""));
+  const absolutePath = path.join(process.cwd(), "public", imagePath.replace(/^\/+/, ""));
   const imageBuffer = await readFile(absolutePath);
   return new File([imageBuffer], "palette-" + code.replaceAll("/", "_") + ".png", { type: "image/png" });
 }
