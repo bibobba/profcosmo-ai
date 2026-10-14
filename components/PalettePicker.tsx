@@ -136,8 +136,9 @@ export function PalettePicker({ value, onChange }: {
                 style={{ minWidth: 0, overflow: "hidden", textAlign: "left", padding: 7, borderRadius: 10,
                   border: active ? "2px solid #d46925" : "1px solid #e1dbd2", background: active ? "#fff7f1" : "#fff",
                   boxShadow: active ? "0 0 0 2px rgba(212,105,37,.10)" : "none", cursor: "pointer" }}>
-                <img src={entry.imagePath} alt={`Прядь EPICA ${entry.code}`} loading="lazy"
-                  style={{ display: "block", width: "100%", height: 104, objectFit: "contain", borderRadius: 6, background: "#f7f5f0" }} />
+                <span className="swatch-image-crop">
+                  <img src={entry.imagePath} alt={`Прядь EPICA ${entry.code}`} loading="lazy" />
+                </span>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 4, padding: "8px 2px 2px" }}>
                   <strong style={{ fontSize: 15, color: "#302b26" }}>{entry.code}</strong>
                   {entry.level !== null && <span style={{ fontSize: 10, color: "#81796f" }}>УГТ {entry.level}</span>}
