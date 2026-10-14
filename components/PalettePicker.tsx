@@ -37,11 +37,20 @@ const FAMILY_LABELS: Record<string, string> = {
   pearl: "Жемчужный",
 };
 
+const familyLabel = (family: string) => {
+  const normalized = family.toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+  return FAMILY_LABELS[normalized] || FAMILY_LABELS[family] || family
+    .toLowerCase()
+    .split(/[_ -]+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 const GROUPS = [
   { value: "all", label: "Все группы" },
   ...Array.from(new Set(PALETTE.map((entry) => entry.family))).map((family) => ({
     value: family,
-    label: FAMILY_LABELS[family] || family,
+    label: PALETTE.find((entry) => entry.family === family)?.label || familyLabel(family),
   })),
 ];
 
@@ -104,7 +113,7 @@ export function PalettePicker({ value, onChange }: {
           <div>
             <div style={{ fontSize: 11, color: "#77736c", marginBottom: 3 }}>ВЫБРАННЫЙ ОТТЕНОК</div>
             <div style={{ fontSize: 20, fontWeight: 800 }}>{selected.code}</div>
-            <div style={{ fontSize: 13, color: "#6e665e", marginTop: 3 }}>{FAMILY_LABELS[selected.family] || selected.family}</div>
+            <div style={{ fontSize: 13, color: "#6e665e", marginTop: 3 }}>{selected.label || familyLabel(selected.family)}</div>
           </div>
         </div>
       )}
@@ -123,18 +132,19 @@ export function PalettePicker({ value, onChange }: {
             const active = entry.code === value;
             return (
               <button key={entry.family + "-" + entry.code} type="button" onClick={() => onChange(entry)}
-                aria-pressed={active} title={FAMILY_LABELS[entry.family] || entry.family}
+                aria-pressed={active} title={familyLabel(entry.family)}
                 style={{ minWidth: 0, overflow: "hidden", textAlign: "left", padding: 7, borderRadius: 10,
                   border: active ? "2px solid #d46925" : "1px solid #e1dbd2", background: active ? "#fff7f1" : "#fff",
                   boxShadow: active ? "0 0 0 2px rgba(212,105,37,.10)" : "none", cursor: "pointer" }}>
-                <img src={entry.imagePath} alt={`Прядь EPICA ${entry.code}`} loading="lazy"
-                  style={{ display: "block", width: "100%", height: 104, objectFit: "cover", borderRadius: 6, background: "#f4f0eb" }} />
+                <span className="swatch-image-crop">
+                  <img src={entry.imagePath} alt={`Прядь EPICA ${entry.code}`} loading="lazy" />
+                </span>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 4, padding: "8px 2px 2px" }}>
                   <strong style={{ fontSize: 15, color: "#302b26" }}>{entry.code}</strong>
                   {entry.level !== null && <span style={{ fontSize: 10, color: "#81796f" }}>УГТ {entry.level}</span>}
                 </div>
                 <div style={{ fontSize: 11, lineHeight: 1.35, color: "#77736c", padding: "0 2px 3px" }}>
-                  {FAMILY_LABELS[entry.family] || entry.family}
+                  {familyLabel(entry.family)}
                 </div>
               </button>
             );
