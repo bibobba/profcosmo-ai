@@ -1,0 +1,1487 @@
+[
+  {
+    "page": 2,
+    "family": "ash",
+    "familyLabel": "Пепельный",
+    "code": "10.1",
+    "file": "images/p2__ash__10.1.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "ash",
+    "familyLabel": "Пепельный",
+    "code": "2.1",
+    "file": "images/p2__ash__2.1.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "ash",
+    "familyLabel": "Пепельный",
+    "code": "4.1",
+    "file": "images/p2__ash__4.1.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "ash",
+    "familyLabel": "Пепельный",
+    "code": "5.1",
+    "file": "images/p2__ash__5.1.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "ash",
+    "familyLabel": "Пепельный",
+    "code": "6.1",
+    "file": "images/p2__ash__6.1.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "ash",
+    "familyLabel": "Пепельный",
+    "code": "7.1",
+    "file": "images/p2__ash__7.1.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "ash",
+    "familyLabel": "Пепельный",
+    "code": "8.1",
+    "file": "images/p2__ash__8.1.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "ash",
+    "familyLabel": "Пепельный",
+    "code": "9.1",
+    "file": "images/p2__ash__9.1.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "cold_natural",
+    "familyLabel": "Холодный натуральный",
+    "code": "1.0",
+    "file": "images/p2__cold_natural__1.0.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "cold_natural",
+    "familyLabel": "Холодный натуральный",
+    "code": "10.0",
+    "file": "images/p2__cold_natural__10.0.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "cold_natural",
+    "familyLabel": "Холодный натуральный",
+    "code": "3.0",
+    "file": "images/p2__cold_natural__3.0.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "cold_natural",
+    "familyLabel": "Холодный натуральный",
+    "code": "4.0",
+    "file": "images/p2__cold_natural__4.0.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "cold_natural",
+    "familyLabel": "Холодный натуральный",
+    "code": "5.0",
+    "file": "images/p2__cold_natural__5.0.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "cold_natural",
+    "familyLabel": "Холодный натуральный",
+    "code": "6.0",
+    "file": "images/p2__cold_natural__6.0.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "cold_natural",
+    "familyLabel": "Холодный натуральный",
+    "code": "7.0",
+    "file": "images/p2__cold_natural__7.0.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "cold_natural",
+    "familyLabel": "Холодный натуральный",
+    "code": "8.0",
+    "file": "images/p2__cold_natural__8.0.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "cold_natural",
+    "familyLabel": "Холодный натуральный",
+    "code": "9.0",
+    "file": "images/p2__cold_natural__9.0.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "intense_natural",
+    "familyLabel": "Интенсивный натуральный",
+    "code": "4.00",
+    "file": "images/p2__intense_natural__4.00.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "intense_natural",
+    "familyLabel": "Интенсивный натуральный",
+    "code": "5.00",
+    "file": "images/p2__intense_natural__5.00.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "intense_natural",
+    "familyLabel": "Интенсивный натуральный",
+    "code": "6.00",
+    "file": "images/p2__intense_natural__6.00.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "intense_natural",
+    "familyLabel": "Интенсивный натуральный",
+    "code": "7.00",
+    "file": "images/p2__intense_natural__7.00.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "intense_natural",
+    "familyLabel": "Интенсивный натуральный",
+    "code": "8.00",
+    "file": "images/p2__intense_natural__8.00.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "intense_natural",
+    "familyLabel": "Интенсивный натуральный",
+    "code": "9.00",
+    "file": "images/p2__intense_natural__9.00.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "metallic",
+    "familyLabel": "Металлик",
+    "code": "10.11",
+    "file": "images/p2__metallic__10.11.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "metallic",
+    "familyLabel": "Металлик",
+    "code": "6.11",
+    "file": "images/p2__metallic__6.11.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "metallic",
+    "familyLabel": "Металлик",
+    "code": "7.11",
+    "file": "images/p2__metallic__7.11.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "metallic",
+    "familyLabel": "Металлик",
+    "code": "8.11",
+    "file": "images/p2__metallic__8.11.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "metallic",
+    "familyLabel": "Металлик",
+    "code": "9.11",
+    "file": "images/p2__metallic__9.11.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "pearl",
+    "familyLabel": "Жемчужный",
+    "code": "10.12",
+    "file": "images/p2__pearl__10.12.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "pearl",
+    "familyLabel": "Жемчужный",
+    "code": "10.21",
+    "file": "images/p2__pearl__10.21.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "pearl",
+    "familyLabel": "Жемчужный",
+    "code": "4.12",
+    "file": "images/p2__pearl__4.12.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "pearl",
+    "familyLabel": "Жемчужный",
+    "code": "5.12",
+    "file": "images/p2__pearl__5.12.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "pearl",
+    "familyLabel": "Жемчужный",
+    "code": "6.12",
+    "file": "images/p2__pearl__6.12.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "pearl",
+    "familyLabel": "Жемчужный",
+    "code": "7.12",
+    "file": "images/p2__pearl__7.12.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "pearl",
+    "familyLabel": "Жемчужный",
+    "code": "8.12",
+    "file": "images/p2__pearl__8.12.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "pearl",
+    "familyLabel": "Жемчужный",
+    "code": "8.21",
+    "file": "images/p2__pearl__8.21.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "pearl",
+    "familyLabel": "Жемчужный",
+    "code": "9.12",
+    "file": "images/p2__pearl__9.12.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "pearl",
+    "familyLabel": "Жемчужный",
+    "code": "9.21",
+    "file": "images/p2__pearl__9.21.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "sand",
+    "familyLabel": "Песочный",
+    "code": "8.13",
+    "file": "images/p2__sand__8.13.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 2,
+    "family": "sand",
+    "familyLabel": "Песочный",
+    "code": "9.13",
+    "file": "images/p2__sand__9.13.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "beige",
+    "familyLabel": "Бежевый",
+    "code": "10.23",
+    "file": "images/p3__beige__10.23.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "beige",
+    "familyLabel": "Бежевый",
+    "code": "10.32",
+    "file": "images/p3__beige__10.32.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "beige",
+    "familyLabel": "Бежевый",
+    "code": "6.32",
+    "file": "images/p3__beige__6.32.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "beige",
+    "familyLabel": "Бежевый",
+    "code": "7.23",
+    "file": "images/p3__beige__7.23.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "beige",
+    "familyLabel": "Бежевый",
+    "code": "7.32",
+    "file": "images/p3__beige__7.32.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "beige",
+    "familyLabel": "Бежевый",
+    "code": "8.23",
+    "file": "images/p3__beige__8.23.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "beige",
+    "familyLabel": "Бежевый",
+    "code": "8.32",
+    "file": "images/p3__beige__8.32.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "beige",
+    "familyLabel": "Бежевый",
+    "code": "9.23",
+    "file": "images/p3__beige__9.23.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "beige",
+    "familyLabel": "Бежевый",
+    "code": "9.32",
+    "file": "images/p3__beige__9.32.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "cold_pearl",
+    "familyLabel": "Холодный жемчуг",
+    "code": "10.18",
+    "file": "images/p3__cold_pearl__10.18.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "cold_pearl",
+    "familyLabel": "Холодный жемчуг",
+    "code": "10.81",
+    "file": "images/p3__cold_pearl__10.81.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "cold_pearl",
+    "familyLabel": "Холодный жемчуг",
+    "code": "4.18",
+    "file": "images/p3__cold_pearl__4.18.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "cold_pearl",
+    "familyLabel": "Холодный жемчуг",
+    "code": "5.18",
+    "file": "images/p3__cold_pearl__5.18.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "cold_pearl",
+    "familyLabel": "Холодный жемчуг",
+    "code": "6.18",
+    "file": "images/p3__cold_pearl__6.18.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "cold_pearl",
+    "familyLabel": "Холодный жемчуг",
+    "code": "7.18",
+    "file": "images/p3__cold_pearl__7.18.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "cold_pearl",
+    "familyLabel": "Холодный жемчуг",
+    "code": "8.18",
+    "file": "images/p3__cold_pearl__8.18.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "cold_pearl",
+    "familyLabel": "Холодный жемчуг",
+    "code": "8.81",
+    "file": "images/p3__cold_pearl__8.81.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "cold_pearl",
+    "familyLabel": "Холодный жемчуг",
+    "code": "9.18",
+    "file": "images/p3__cold_pearl__9.18.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "cold_pearl",
+    "familyLabel": "Холодный жемчуг",
+    "code": "9.81",
+    "file": "images/p3__cold_pearl__9.81.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "copper",
+    "familyLabel": "Медный",
+    "code": "5.4",
+    "file": "images/p3__copper__5.4.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "copper",
+    "familyLabel": "Медный",
+    "code": "6.4",
+    "file": "images/p3__copper__6.4.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "copper",
+    "familyLabel": "Медный",
+    "code": "7.4",
+    "file": "images/p3__copper__7.4.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "copper",
+    "familyLabel": "Медный",
+    "code": "8.4",
+    "file": "images/p3__copper__8.4.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "copper",
+    "familyLabel": "Медный",
+    "code": "9.4",
+    "file": "images/p3__copper__9.4.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "golden",
+    "familyLabel": "Золотистый",
+    "code": "10.3",
+    "file": "images/p3__golden__10.3.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "golden",
+    "familyLabel": "Золотистый",
+    "code": "5.3",
+    "file": "images/p3__golden__5.3.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "golden",
+    "familyLabel": "Золотистый",
+    "code": "6.3",
+    "file": "images/p3__golden__6.3.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "golden",
+    "familyLabel": "Золотистый",
+    "code": "7.3",
+    "file": "images/p3__golden__7.3.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "golden",
+    "familyLabel": "Золотистый",
+    "code": "8.3",
+    "file": "images/p3__golden__8.3.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "golden",
+    "familyLabel": "Золотистый",
+    "code": "9.3",
+    "file": "images/p3__golden__9.3.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "golden_copper",
+    "familyLabel": "Золотисто-медный",
+    "code": "6.34",
+    "file": "images/p3__golden_copper__6.34.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "golden_copper",
+    "familyLabel": "Золотисто-медный",
+    "code": "7.34",
+    "file": "images/p3__golden_copper__7.34.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "golden_copper",
+    "familyLabel": "Золотисто-медный",
+    "code": "8.34",
+    "file": "images/p3__golden_copper__8.34.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "intense_copper",
+    "familyLabel": "Интенсивно-медный",
+    "code": "7.44",
+    "file": "images/p3__intense_copper__7.44.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "intense_copper",
+    "familyLabel": "Интенсивно-медный",
+    "code": "8.44",
+    "file": "images/p3__intense_copper__8.44.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "intense_copper",
+    "familyLabel": "Интенсивно-медный",
+    "code": "8.45",
+    "file": "images/p3__intense_copper__8.45.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "intense_copper",
+    "familyLabel": "Интенсивно-медный",
+    "code": "8.46",
+    "file": "images/p3__intense_copper__8.46.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "intense_violet",
+    "familyLabel": "Интенсивный фиолетовый",
+    "code": "10.22",
+    "file": "images/p3__intense_violet__10.22.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "intense_violet",
+    "familyLabel": "Интенсивный фиолетовый",
+    "code": "4.22",
+    "file": "images/p3__intense_violet__4.22.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "intense_violet",
+    "familyLabel": "Интенсивный фиолетовый",
+    "code": "6.22",
+    "file": "images/p3__intense_violet__6.22.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "intense_violet",
+    "familyLabel": "Интенсивный фиолетовый",
+    "code": "8.22",
+    "file": "images/p3__intense_violet__8.22.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "intense_violet",
+    "familyLabel": "Интенсивный фиолетовый",
+    "code": "9.22",
+    "file": "images/p3__intense_violet__9.22.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "iridescent_blond",
+    "familyLabel": "Перламутровый блонд",
+    "code": "10.26",
+    "file": "images/p3__iridescent_blond__10.26.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "iridescent_blond",
+    "familyLabel": "Перламутровый блонд",
+    "code": "8.26",
+    "file": "images/p3__iridescent_blond__8.26.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 3,
+    "family": "iridescent_blond",
+    "familyLabel": "Перламутровый блонд",
+    "code": "9.26",
+    "file": "images/p3__iridescent_blond__9.26.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "chocolate",
+    "familyLabel": "Шоколадный",
+    "code": "4.7",
+    "file": "images/p4__chocolate__4.7.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "chocolate",
+    "familyLabel": "Шоколадный",
+    "code": "4.778",
+    "file": "images/p4__chocolate__4.778.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "chocolate",
+    "familyLabel": "Шоколадный",
+    "code": "5.7",
+    "file": "images/p4__chocolate__5.7.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "chocolate",
+    "familyLabel": "Шоколадный",
+    "code": "5.778",
+    "file": "images/p4__chocolate__5.778.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "chocolate",
+    "familyLabel": "Шоколадный",
+    "code": "6.7",
+    "file": "images/p4__chocolate__6.7.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "chocolate",
+    "familyLabel": "Шоколадный",
+    "code": "6.778",
+    "file": "images/p4__chocolate__6.778.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "chocolate",
+    "familyLabel": "Шоколадный",
+    "code": "7.7",
+    "file": "images/p4__chocolate__7.7.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "chocolate",
+    "familyLabel": "Шоколадный",
+    "code": "7.778",
+    "file": "images/p4__chocolate__7.778.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "chocolate",
+    "familyLabel": "Шоколадный",
+    "code": "8.7",
+    "file": "images/p4__chocolate__8.7.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "chocolate",
+    "familyLabel": "Шоколадный",
+    "code": "8.778",
+    "file": "images/p4__chocolate__8.778.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "10.71",
+    "file": "images/p4__frozen_chocolate__10.71.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "10.72",
+    "file": "images/p4__frozen_chocolate__10.72.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "4.17",
+    "file": "images/p4__frozen_chocolate__4.17.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "4.71",
+    "file": "images/p4__frozen_chocolate__4.71.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "5.17",
+    "file": "images/p4__frozen_chocolate__5.17.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "5.71",
+    "file": "images/p4__frozen_chocolate__5.71.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "5.72",
+    "file": "images/p4__frozen_chocolate__5.72.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "6.17",
+    "file": "images/p4__frozen_chocolate__6.17.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "6.71",
+    "file": "images/p4__frozen_chocolate__6.71.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "6.72",
+    "file": "images/p4__frozen_chocolate__6.72.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "7.17",
+    "file": "images/p4__frozen_chocolate__7.17.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "7.71",
+    "file": "images/p4__frozen_chocolate__7.71.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "7.72",
+    "file": "images/p4__frozen_chocolate__7.72.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "8.17",
+    "file": "images/p4__frozen_chocolate__8.17.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "8.71",
+    "file": "images/p4__frozen_chocolate__8.71.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "8.72",
+    "file": "images/p4__frozen_chocolate__8.72.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "9.71",
+    "file": "images/p4__frozen_chocolate__9.71.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "frozen_chocolate",
+    "familyLabel": "Холодный шоколад",
+    "code": "9.72",
+    "file": "images/p4__frozen_chocolate__9.72.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "mahogany",
+    "familyLabel": "Махагон",
+    "code": "4.5",
+    "file": "images/p4__mahogany__4.5.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "mahogany",
+    "familyLabel": "Махагон",
+    "code": "6.5",
+    "file": "images/p4__mahogany__6.5.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "red",
+    "familyLabel": "Красный",
+    "code": "5.66",
+    "file": "images/p4__red__5.66.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "red",
+    "familyLabel": "Красный",
+    "code": "7.66",
+    "file": "images/p4__red__7.66.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "red",
+    "familyLabel": "Красный",
+    "code": "8.62",
+    "file": "images/p4__red__8.62.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "rosewood",
+    "familyLabel": "Розовое дерево",
+    "code": "4.75",
+    "file": "images/p4__rosewood__4.75.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "rosewood",
+    "familyLabel": "Розовое дерево",
+    "code": "5.75",
+    "file": "images/p4__rosewood__5.75.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "rosewood",
+    "familyLabel": "Розовое дерево",
+    "code": "6.75",
+    "file": "images/p4__rosewood__6.75.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "ultra_red",
+    "familyLabel": "Ультра-красный",
+    "code": "55.66",
+    "file": "images/p4__ultra_red__55.66.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 4,
+    "family": "ultra_red",
+    "familyLabel": "Ультра-красный",
+    "code": "77.66",
+    "file": "images/p4__ultra_red__77.66.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "caramel",
+    "familyLabel": "Карамельный",
+    "code": "6.31",
+    "file": "images/p5__caramel__6.31.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "caramel",
+    "familyLabel": "Карамельный",
+    "code": "7.31",
+    "file": "images/p5__caramel__7.31.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "0 0A",
+    "file": "images/p5__corrector__0_0A.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "0 0N",
+    "file": "images/p5__corrector__0_0N.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "Anti Orange",
+    "file": "images/p5__corrector__Anti_Orange.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "Anti Yellow",
+    "file": "images/p5__corrector__Anti_Yellow.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "Blue",
+    "file": "images/p5__corrector__Blue.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "Copper",
+    "file": "images/p5__corrector__Copper.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "Gray",
+    "file": "images/p5__corrector__Gray.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "Green",
+    "file": "images/p5__corrector__Green.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "Red",
+    "file": "images/p5__corrector__Red.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "Violet",
+    "file": "images/p5__corrector__Violet.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "corrector",
+    "familyLabel": "Корректор",
+    "code": "Yellow",
+    "file": "images/p5__corrector__Yellow.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "golden_chocolate",
+    "familyLabel": "Золотистый шоколад",
+    "code": "4.73",
+    "file": "images/p5__golden_chocolate__4.73.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "golden_chocolate",
+    "familyLabel": "Золотистый шоколад",
+    "code": "5.73",
+    "file": "images/p5__golden_chocolate__5.73.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "golden_chocolate",
+    "familyLabel": "Золотистый шоколад",
+    "code": "6.73",
+    "file": "images/p5__golden_chocolate__6.73.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "golden_chocolate",
+    "familyLabel": "Золотистый шоколад",
+    "code": "7.73",
+    "file": "images/p5__golden_chocolate__7.73.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "golden_chocolate",
+    "familyLabel": "Золотистый шоколад",
+    "code": "8.73",
+    "file": "images/p5__golden_chocolate__8.73.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "golden_chocolate",
+    "familyLabel": "Золотистый шоколад",
+    "code": "9.73",
+    "file": "images/p5__golden_chocolate__9.73.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "001",
+    "file": "images/p5__pastel_toner__001.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "06",
+    "file": "images/p5__pastel_toner__06.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "11",
+    "file": "images/p5__pastel_toner__11.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "111",
+    "file": "images/p5__pastel_toner__111.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "112",
+    "file": "images/p5__pastel_toner__112.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "12",
+    "file": "images/p5__pastel_toner__12.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "21",
+    "file": "images/p5__pastel_toner__21.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "22",
+    "file": "images/p5__pastel_toner__22.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "26",
+    "file": "images/p5__pastel_toner__26.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "31",
+    "file": "images/p5__pastel_toner__31.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "34",
+    "file": "images/p5__pastel_toner__34.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "pastel_toner",
+    "familyLabel": "Пастельный тонер",
+    "code": "62",
+    "file": "images/p5__pastel_toner__62.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_blond",
+    "familyLabel": "Специальный блонд",
+    "code": "12.0",
+    "file": "images/p5__special_blond__12.0.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_blond",
+    "familyLabel": "Специальный блонд",
+    "code": "12.10",
+    "file": "images/p5__special_blond__12.10.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_blond",
+    "familyLabel": "Специальный блонд",
+    "code": "12.11",
+    "file": "images/p5__special_blond__12.11.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_blond",
+    "familyLabel": "Специальный блонд",
+    "code": "12.112",
+    "file": "images/p5__special_blond__12.112.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_blond",
+    "familyLabel": "Специальный блонд",
+    "code": "12.12",
+    "file": "images/p5__special_blond__12.12.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_blond",
+    "familyLabel": "Специальный блонд",
+    "code": "12.2",
+    "file": "images/p5__special_blond__12.2.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_blond",
+    "familyLabel": "Специальный блонд",
+    "code": "12.21",
+    "file": "images/p5__special_blond__12.21.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_blond",
+    "familyLabel": "Специальный блонд",
+    "code": "12.81",
+    "file": "images/p5__special_blond__12.81.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_toner",
+    "familyLabel": "Специальный тонер",
+    "code": "10.6S",
+    "file": "images/p5__special_toner__10.6S.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_toner",
+    "familyLabel": "Специальный тонер",
+    "code": "9.2S",
+    "file": "images/p5__special_toner__9.2S.png",
+    "width": 180,
+    "height": 290
+  },
+  {
+    "page": 5,
+    "family": "special_toner",
+    "familyLabel": "Специальный тонер",
+    "code": "9.4S",
+    "file": "images/p5__special_toner__9.4S.png",
+    "width": 180,
+    "height": 290
+  }
+]
